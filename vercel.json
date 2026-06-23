@@ -10,8 +10,9 @@
       "dest": "/api/epo/auth/accesstoken"
     },
     {
-      "src": "/api/epo/(.*)",
+      "src": "/api/epo/(.+)",
       "dest": "/api/epo/[...path].js"
     }
-  ]
+  ],
+  "trailingSlash": false
 }
