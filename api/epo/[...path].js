@@ -1,9 +1,8 @@
 export default async function handler(req, res) {
   try {
-    const pathParts = Array.isArray(req.query.path) 
-      ? req.query.path 
-      : [req.query.path].filter(Boolean);
-    const path = pathParts.join('/');
+    // URLからパスを直接取得（クエリパラメータを除く）
+    const fullUrl = req.url || '';
+    const basePath = fullUrl.replace(/^\/api\/epo\//, '').split('?')[0];
 
     const queryParams = { ...req.query };
     delete queryParams.path;
@@ -13,7 +12,8 @@ export default async function handler(req, res) {
           .join('&')
       : '';
 
-    const url = 'https://ops.epo.org/3.2/rest-services/' + path + queryStr;
+    const url = 'https://ops.epo.org/3.2/rest-services/' + basePath + queryStr;
+    console.log('EPO URL:', url);
 
     const response = await fetch(url, {
       method: req.method,
@@ -27,6 +27,7 @@ export default async function handler(req, res) {
     const contentType = response.headers.get('content-type') || 'text/xml';
     res.status(response.status).setHeader('Content-Type', contentType).send(data);
   } catch(e) {
+    console.error('EPO proxy error:', e.message);
     res.status(500).json({ error: e.message });
   }
 }
