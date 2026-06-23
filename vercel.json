@@ -1,18 +1,12 @@
 {
-  "functions": {
-    "api/epo/[...path].js": {
-      "maxDuration": 30
-    }
-  },
-  "routes": [
+  "rewrites": [
     {
-      "src": "/api/epo/auth/(.*)",
-      "dest": "/api/epo/auth/accesstoken"
+      "source": "/api/epo/auth/accesstoken",
+      "destination": "/api/epo-auth"
     },
     {
-      "src": "/api/epo/(.+)",
-      "dest": "/api/epo/[...path].js"
+      "source": "/api/epo/:path*",
+      "destination": "/api/epo-proxy?path=:path*"
     }
-  ],
-  "trailingSlash": false
+  ]
 }
