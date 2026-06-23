@@ -1,0 +1,17 @@
+{
+  "functions": {
+    "api/epo/[...path].js": {
+      "maxDuration": 30
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/epo/auth/(.*)",
+      "dest": "/api/epo/auth/accesstoken"
+    },
+    {
+      "src": "/api/epo/(.*)",
+      "dest": "/api/epo/[...path].js"
+    }
+  ]
+}
