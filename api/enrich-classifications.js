@@ -23,13 +23,13 @@
 // ★要確認は元スクリプトと同じ [A]番号書式 / [B]JSONパス / [C]間隔
 // =============================================================================
 
-const BATCH = 25;
+const BATCH = 3;
 const REQUEST_DELAY_MS = 500;
-const MAX_RETRY = 3;
+const MAX_RETRY = 1;
 const OPS_BASE = 'https://ops.epo.org/3.2';
 
 // 試走時は1社に絞る。確認後は null に戻す(全社対象)。
-const TEST_COMPANY_ID = null; // ← 全社にするときは null にする
+const TEST_COMPANY_ID = null; // 全社対象(試走時は 'apple' 等のslugにする)
 
 export const config = { maxDuration: 60 };
 
@@ -103,17 +103,32 @@ async function getAccessToken() {
   return accessToken;
 }
 
-// --- biblio取得(epodoc→docdb) [A] -----------------------------------------
+// --- 番号書式の候補を生成 [A] ----------------------------------------------
+// OPSは末尾のkind code(A1/B2等)を付けるとヒットしないことが多い。
+// kind codeを外した形を優先し、元の形も保険で試す。重複は除く。
+function numberVariants(raw) {
+  const n = (raw || '').trim().toUpperCase().replace(/\s+/g, '');
+  const variants = [];
+  // 末尾 kind code(英字+任意数字, 例 A1/B2/A)を除いた形
+  const noKind = n.replace(/[A-Z]\d?$/, '');
+  if (noKind && noKind !== n) variants.push(noKind);
+  variants.push(n); // 元の形(kind code付き)も保険で
+  return [...new Set(variants)];
+}
+
+// --- biblio取得(番号書式 × epodoc→docdb の順に試す) ------------------------
 async function fetchBiblio(patentNumber) {
-  for (const format of ['epodoc', 'docdb']) {
-    const url = `${OPS_BASE}/rest-services/published-data/publication/${format}/${encodeURIComponent(patentNumber)}/biblio`;
-    for (let attempt = 0; attempt < MAX_RETRY; attempt++) {
-      const token = await getAccessToken();
-      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } });
-      if (res.ok) return res.json();
-      if (res.status === 401) { accessToken = null; continue; }
-      if (res.status === 403 || res.status === 429) { await sleep(REQUEST_DELAY_MS * 2 ** (attempt + 1)); continue; }
-      break;
+  for (const num of numberVariants(patentNumber)) {
+    for (const format of ['epodoc', 'docdb']) {
+      const url = `${OPS_BASE}/rest-services/published-data/publication/${format}/${encodeURIComponent(num)}/biblio`;
+      for (let attempt = 0; attempt < MAX_RETRY; attempt++) {
+        const token = await getAccessToken();
+        const res = await fetch(url, { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } });
+        if (res.ok) return res.json();
+        if (res.status === 401) { accessToken = null; continue; }
+        if (res.status === 403 || res.status === 429) { await sleep(REQUEST_DELAY_MS * 2 ** (attempt + 1)); continue; }
+        break; // 404等はこの書式を諦めて次へ
+      }
     }
   }
   return null;
