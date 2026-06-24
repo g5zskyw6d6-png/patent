@@ -109,7 +109,7 @@ export default async function handler(req, res) {
     .select('id, patent_number')
     .is('classifications_fetched_at', null)
     .not('patent_number', 'is', null)
-    // .eq('company_id', 'apple')  // ← 試走時はこの1行で1社に絞る。確認後に削除
+    .eq('company_id', 'apple')  // ← 試走時はこの1行で1社に絞る。確認後に削除
     .limit(BATCH);
 
   if (error) return res.status(500).json({ error: error.message });
