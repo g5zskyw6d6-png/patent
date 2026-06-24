@@ -1,12 +1,15 @@
 // =============================================================================
-// api/enrich-classifications.js  ―  Vercel Function 版バックフィル
+// api/enrich-classifications.js  ―  Vercel Function 版バックフィル(依存ゼロ)
 // =============================================================================
 // 1回の呼び出しで「少量バッチ(BATCH件)」だけ IPC/CPC を取り込み、すぐ返す。
 // cron / 外部スケジューラから繰り返し叩くことで全件を埋める。
 // classifications_fetched_at で取得済みを記録するので、何度叩いても続きから進む。
 //
+// ★この版は @supabase/supabase-js を使わず、Supabase REST API(PostgREST)を
+//   素の fetch で叩く。外部パッケージ依存ゼロなので、関数バンドル不足
+//   (ERR_MODULE_NOT_FOUND)が起きない。既存の epo proxy と同じ fetch 流儀。
+//
 // 配置: プロジェクト直下の  api/enrich-classifications.js
-//       (Vite製SPAでもVercelは api/ 配下を関数としてデプロイする)
 //
 // 必要な環境変数(Vercel → Settings → Environment Variables):
 //   既存を再利用(追加不要):
@@ -20,15 +23,14 @@
 // ★要確認は元スクリプトと同じ [A]番号書式 / [B]JSONパス / [C]間隔
 // =============================================================================
 
-import { createClient } from '@supabase/supabase-js';
-
-// 1呼び出しの処理件数。関数タイムアウト内に収める(下の maxDuration と整合)。
 const BATCH = 25;
 const REQUEST_DELAY_MS = 500;
 const MAX_RETRY = 3;
 const OPS_BASE = 'https://ops.epo.org/3.2';
 
-// Fluid Compute での最大実行時間(秒)。Pro なら 300 まで上げてBATCHも増やせる。
+// 試走時は1社に絞る。確認後は null に戻す(全社対象)。
+const TEST_COMPANY_ID = null; // ← 全社にするときは null にする
+
 export const config = { maxDuration: 60 };
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -36,7 +38,54 @@ const txt = (n) => (n && typeof n === 'object' && '$' in n ? n.$ : n);
 const arr = (x) => (Array.isArray(x) ? x : x == null ? [] : [x]);
 const normCode = (c) => (c || '').toUpperCase().replace(/\s+/g, '').trim();
 
-// --- OPS OAuth(ウォームインスタンス内で使い回す) ---------------------------
+// --- Supabase REST(PostgREST)ヘルパ ---------------------------------------
+const SB_URL = () => process.env.VITE_SUPABASE_URL;
+const SB_KEY = () => process.env.SUPABASE_SERVICE_ROLE_KEY;
+function sbHeaders(extra = {}) {
+  const key = SB_KEY();
+  return { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', ...extra };
+}
+
+// 未取得の特許を BATCH 件取得
+async function fetchUnclassified() {
+  let url = `${SB_URL()}/rest/v1/patents`
+    + `?select=id,patent_number`
+    + `&classifications_fetched_at=is.null`
+    + `&patent_number=not.is.null`
+    + `&limit=${BATCH}`;
+  if (TEST_COMPANY_ID) url += `&company_id=eq.${encodeURIComponent(TEST_COMPANY_ID)}`;
+  const res = await fetch(url, { headers: sbHeaders() });
+  if (!res.ok) throw new Error(`Supabase取得失敗: ${res.status} ${await res.text()}`);
+  return res.json();
+}
+
+// 1件更新
+async function updatePatent(id, cpc, ipc) {
+  const url = `${SB_URL()}/rest/v1/patents?id=eq.${encodeURIComponent(id)}`;
+  const res = await fetch(url, {
+    method: 'PATCH',
+    headers: sbHeaders({ Prefer: 'return=minimal' }),
+    body: JSON.stringify({
+      cpc: cpc.length ? cpc : null,
+      ipc: ipc.length ? ipc : null,
+      classifications_fetched_at: new Date().toISOString(),
+    }),
+  });
+  if (!res.ok) throw new Error(`更新失敗: ${res.status}`);
+}
+
+// 残件数
+async function countRemaining() {
+  let url = `${SB_URL()}/rest/v1/patents`
+    + `?select=id&classifications_fetched_at=is.null&patent_number=not.is.null`;
+  if (TEST_COMPANY_ID) url += `&company_id=eq.${encodeURIComponent(TEST_COMPANY_ID)}`;
+  const res = await fetch(url, { headers: sbHeaders({ Prefer: 'count=exact', Range: '0-0' }) });
+  const cr = res.headers.get('content-range') || '';   // 形式: 0-0/1234
+  const total = cr.split('/')[1];
+  return total ? Number(total) : null;
+}
+
+// --- OPS OAuth --------------------------------------------------------------
 let accessToken = null;
 let tokenExpiresAt = 0;
 async function getAccessToken() {
@@ -54,7 +103,7 @@ async function getAccessToken() {
   return accessToken;
 }
 
-// --- biblio取得(epodoc→docdb フォールバック) [A] -------------------------
+// --- biblio取得(epodoc→docdb) [A] -----------------------------------------
 async function fetchBiblio(patentNumber) {
   for (const format of ['epodoc', 'docdb']) {
     const url = `${OPS_BASE}/rest-services/published-data/publication/${format}/${encodeURIComponent(patentNumber)}/biblio`;
@@ -95,50 +144,34 @@ function parseClassifications(json) {
 
 // --- ハンドラ ---------------------------------------------------------------
 export default async function handler(req, res) {
-  // 不正呼び出し防止: CRON_SECRET を設定していれば Bearer 一致を要求
   if (process.env.CRON_SECRET && req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
     return res.status(401).json({ error: 'unauthorized' });
   }
-
-  const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { persistSession: false },
-  });
-
-  const { data: rows, error } = await supabase
-    .from('patents')
-    .select('id, patent_number')
-    .is('classifications_fetched_at', null)
-    .not('patent_number', 'is', null)
-    .eq('company_id', 'apple')  // ← 試走時はこの1行で1社に絞る。確認後に削除
-    .limit(BATCH);
-
-  if (error) return res.status(500).json({ error: error.message });
-  if (!rows?.length) return res.status(200).json({ processed: 0, remaining: 0, done: true });
-
-  let withCodes = 0, empty = 0, failed = 0;
-  for (const row of rows) {
-    let cpc = [], ipc = [];
-    try {
-      const json = await fetchBiblio(row.patent_number);
-      if (json) ({ cpc, ipc } = parseClassifications(json));
-    } catch { failed++; }
-    const { error: upErr } = await supabase.from('patents').update({
-      cpc: cpc.length ? cpc : null,
-      ipc: ipc.length ? ipc : null,
-      classifications_fetched_at: new Date().toISOString(),
-    }).eq('id', row.id);
-    if (upErr) failed++;
-    else if (cpc.length || ipc.length) withCodes++;
-    else empty++;
-    await sleep(REQUEST_DELAY_MS);
+  if (!SB_URL() || !SB_KEY()) {
+    return res.status(500).json({ error: 'env missing', has_url: !!SB_URL(), has_service_role: !!SB_KEY() });
   }
 
-  // 残件数を返す(0になったら完了。cronはそのまま回しても no-op で安全)
-  const { count: remaining } = await supabase
-    .from('patents')
-    .select('id', { count: 'exact', head: true })
-    .is('classifications_fetched_at', null)
-    .not('patent_number', 'is', null);
+  try {
+    const rows = await fetchUnclassified();
+    if (!rows.length) return res.status(200).json({ processed: 0, remaining: 0, done: true });
 
-  return res.status(200).json({ processed: rows.length, withCodes, empty, failed, remaining });
+    let withCodes = 0, empty = 0, failed = 0;
+    for (const row of rows) {
+      let cpc = [], ipc = [];
+      try {
+        const json = await fetchBiblio(row.patent_number);
+        if (json) ({ cpc, ipc } = parseClassifications(json));
+        await updatePatent(row.id, cpc, ipc);
+        if (cpc.length || ipc.length) withCodes++; else empty++;
+      } catch (e) {
+        failed++;
+      }
+      await sleep(REQUEST_DELAY_MS);
+    }
+
+    const remaining = await countRemaining();
+    return res.status(200).json({ processed: rows.length, withCodes, empty, failed, remaining });
+  } catch (e) {
+    return res.status(500).json({ error: String(e.message || e) });
+  }
 }
