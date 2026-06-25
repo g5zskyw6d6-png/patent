@@ -640,7 +640,7 @@ const [claimsFetchPhase, setClaimsFetchPhase] = useState("idle");
     setClaimsFetchPhase("idle");
   };
 
-  const doAnalyzeResults = async () => {
+  const doAnalyzeResults = async (deep = false) => {
     setAnalyzePhase("analyzing"); setAnalysis(null);
     try {
       const filterDesc = [
@@ -668,8 +668,26 @@ const [claimsFetchPhase, setClaimsFetchPhase] = useState("idle");
         setAnalyzePhase("idle"); return;
       }
 
-      // ② バッチに分割（50件ずつ）
-      const BATCH_SIZE = 50;
+      // ② モード別パラメーター
+      const BATCH_SIZE    = deep ? 20  : 50;
+      const ABSTRACT_WORDS = deep ? 9999 : 80;   // deepは全文
+      const CLAIMS_WORDS   = deep ? 9999 : 50;   // deepは全文
+      const DESC_WORDS     = deep ? 1000 : 0;    // 標準は含まない
+      const BATCH_TOKENS   = deep ? 2400 : 1200;
+      const SYNTH_TOKENS   = deep ? 3000 : 2000;
+
+      // deepモード：クレーム・説明文保有率を事前集計して表示
+      if (deep) {
+        const claimsCount = allPatents.filter(p => p.claims_independent).length;
+        const descCount   = allPatents.filter(p => p.description_text).length;
+        setAnalysis({
+          _progress: { done: 0, total: 0, phase: "batch" },
+          _deepStats: { claimsCount, descCount, total: allPatents.length },
+        });
+        await new Promise(r => setTimeout(r, 200));
+      }
+
+      // ③ バッチに分割
       const batches = [];
       for (let i = 0; i < allPatents.length; i += BATCH_SIZE) {
         batches.push(allPatents.slice(i, i + BATCH_SIZE));
@@ -677,23 +695,29 @@ const [claimsFetchPhase, setClaimsFetchPhase] = useState("idle");
       const totalBatches = batches.length;
       const batchResults = [];
 
-      // ③ バッチ分析（各バッチでカテゴリー・トレンド・注目特許を抽出）
-for (let b = 0; b < totalBatches; b++) {
-          // 分析中ステータスを更新
-          setAnalysis({ _progress: { done: b, total: totalBatches, phase: "batch" } });
-          const batch = batches[b];
-          const limitWords = (text, maxWords) => {
-            if (!text) return "";
-            return text.split(/\s+/).slice(0, maxWords).join(" ");
-          };
-          const list = batch.map((p, i) => {
-            let e = (i+1)+". ["+p.country+"] "+p.title_en+" ("+p.publication_date+")";
-            if (p.company_name) e += " — "+p.company_name;
-            if (p.abstract_epo)       e += "\n   Abstract: "  + limitWords(p.abstract_epo, 80);
-            if (p.claims_independent) e += "\n   Key Claim: " + limitWords(p.claims_independent, 50);
-            return e;
-          }).join("\n");
-          const batchText = await claudePost(          "You are a patent analyst. Analyze this batch and extract key technology patterns. Reply ONLY in this exact format:\n"
+      // ④ バッチ分析
+      for (let b = 0; b < totalBatches; b++) {
+        setAnalysis(prev => ({
+          ...(prev || {}),
+          _progress: { done: b, total: totalBatches, phase: "batch" },
+        }));
+        const batch = batches[b];
+        const limitWords = (text, maxWords) => {
+          if (!text) return "";
+          if (maxWords >= 9999) return text;
+          return text.split(/\s+/).slice(0, maxWords).join(" ");
+        };
+        const list = batch.map((p, i) => {
+          let e = (i+1)+". ["+p.country+"] "+p.title_en+" ("+p.publication_date+")";
+          if (p.company_name) e += " — "+p.company_name;
+          if (p.abstract_epo)       e += "\n   Abstract: "  + limitWords(p.abstract_epo, ABSTRACT_WORDS);
+          if (p.claims_independent) e += "\n   Key Claim: " + limitWords(p.claims_independent, CLAIMS_WORDS);
+          if (deep && p.description_text) e += "\n   Description: " + limitWords(p.description_text, DESC_WORDS);
+          return e;
+        }).join("\n");
+
+        const batchText = await claudePost(
+          "You are a patent analyst. Analyze this batch and extract key technology patterns. Reply ONLY in this exact format:\n"
           +"BCAT1:category name|percentage|one line description\n"
           +"BCAT2:category name|percentage|one line description\n"
           +"BCAT3:category name|percentage|one line description\n"
@@ -704,7 +728,7 @@ for (let b = 0; b < totalBatches; b++) {
           +"BTREND3:trend title|2 sentence explanation in Japanese\n"
           +"BNOTABLE:notable patent title and innovation in Japanese (2 sentences)\n\n"
           +"Batch "+(b+1)+"/"+totalBatches+" ("+batch.length+" of "+allPatents.length+" patents):\n"+list
-          , 1200
+          , BATCH_TOKENS
         );
 
         const getV = p => { const l = batchText.split("\n").find(l => l.startsWith(p)); return l ? l.slice(p.length).trim() : ""; };
@@ -719,12 +743,14 @@ for (let b = 0; b < totalBatches; b++) {
           notable:    getV("BNOTABLE:"),
         });
 
-        // バッチ間に少し待機してレート制限を回避
         if (b < totalBatches - 1) await new Promise(r => setTimeout(r, 600));
       }
 
-      // ④ 統合分析（全バッチの結果を1つのプロンプトにまとめてClaudeに統合させる）
-      setAnalysis({ _progress: { done: totalBatches, total: totalBatches, phase: "synthesis" } });
+      // ⑤ 統合分析
+      setAnalysis(prev => ({
+        ...(prev || {}),
+        _progress: { done: totalBatches, total: totalBatches, phase: "synthesis" },
+      }));
 
       const batchSummary = batchResults.map(br =>
         "--- バッチ "+br.batchNum+" ("+br.count+"件) ---\n"
@@ -733,8 +759,15 @@ for (let b = 0; b < totalBatches; b++) {
         +"注目特許: "+br.notable
       ).join("\n\n");
 
-      // ④-A 統合分析（前半）：カテゴリー＋トレンド
-      setAnalysis({ _progress: { done: totalBatches, total: totalBatches, phase: "synthesis" } });
+      // ⑤-A 統合分析前半：カテゴリー＋トレンド
+      const trendInstruction = deep
+        ? "TREND1:trend title|8 sentence detailed explanation citing specific claim language in Japanese\n"
+         +"TREND2:trend title|8 sentence detailed explanation citing specific claim language in Japanese\n"
+         +"TREND3:trend title|8 sentence detailed explanation citing specific claim language in Japanese"
+        : "TREND1:trend title|3-4 sentence detailed explanation in Japanese\n"
+         +"TREND2:trend title|3-4 sentence detailed explanation in Japanese\n"
+         +"TREND3:trend title|3-4 sentence detailed explanation in Japanese";
+
       const synthText1 = await claudePost(
         "You are a patent intelligence analyst. Based on the batch analysis below, synthesize the technology category breakdown and key trends.\n\n"
         +"Total: "+allPatents.length+" patents ("+totalBatches+" batches). Filter: "+filterDesc+"\n\n"
@@ -745,24 +778,27 @@ for (let b = 0; b < totalBatches; b++) {
         +"CAT3:category name|percentage|detailed one-line description\n"
         +"CAT4:category name|percentage|detailed one-line description\n"
         +"CAT5:category name|percentage|detailed one-line description\n"
-        +"TREND1:trend title|3-4 sentence detailed explanation in Japanese\n"
-        +"TREND2:trend title|3-4 sentence detailed explanation in Japanese\n"
-        +"TREND3:trend title|3-4 sentence detailed explanation in Japanese"
-        , 2000
+        +trendInstruction
+        , SYNTH_TOKENS
       );
 
       await new Promise(r => setTimeout(r, 800));
 
-      // ④-B 統合分析（後半）：2050年シナリオ・戦略・注目特許
+      // ⑤-B 統合分析後半：2050年シナリオ・戦略・注目特許×2
+      const patentInstruction = deep
+        ? "PATENT1:5 sentence description of the 1st most notable patent, its claim scope, and inventive mechanism in Japanese\n"
+         +"PATENT2:5 sentence description of the 2nd most notable patent, its claim scope, and inventive mechanism in Japanese"
+        : "PATENT:2-3 sentence description of the most notable patent and its innovation in Japanese";
+
       const synthText2 = await claudePost(
-        "You are a patent intelligence analyst. Based on the batch analysis below, write the 2050 scenario, strategic implications, and most notable patent.\n\n"
+        "You are a patent intelligence analyst. Based on the batch analysis below, write the 2050 scenario, strategic implications, and most notable patents.\n\n"
         +"Total: "+allPatents.length+" patents ("+totalBatches+" batches). Filter: "+filterDesc+"\n\n"
         +"Batch summaries:\n"+batchSummary+"\n\n"
         +"Reply ONLY in this exact format:\n"
         +"IMPACT:5-6 sentence comprehensive 2050 social transformation scenario in Japanese\n"
         +"STRATEGIC:4-5 sentence competitive advantage and strategic implications in Japanese\n"
-        +"PATENT:2-3 sentence description of the most notable patent and its innovation in Japanese"
-        , 2000
+        +patentInstruction
+        , SYNTH_TOKENS
       );
 
       const getV1 = p => { const l = synthText1.split("\n").find(l => l.startsWith(p)); return l ? l.slice(p.length).trim() : ""; };
@@ -771,6 +807,7 @@ for (let b = 0; b < totalBatches; b++) {
       const parseTrend2 = p => { const v = getV1(p); const i = v.indexOf("|"); return { title:i>=0?v.slice(0,i):v, body:i>=0?v.slice(i+1):"" }; };
 
       const r = {
+        deep,
         filterDesc,
         totalCount:   allPatents.length,
         totalBatches,
@@ -779,18 +816,24 @@ for (let b = 0; b < totalBatches; b++) {
         trends:       [parseTrend2("TREND1:"),parseTrend2("TREND2:"),parseTrend2("TREND3:")].filter(t=>t.title),
         impact2050:   getV2("IMPACT:"),
         strategic:    getV2("STRATEGIC:"),
-        topPatent:    getV2("PATENT:"),
+        topPatent:    deep ? null : getV2("PATENT:"),
+        topPatent1:   deep ? getV2("PATENT1:") : null,
+        topPatent2:   deep ? getV2("PATENT2:") : null,
       };
       setAnalysis(r);
       setAnalyzePhase("done"); setShowAnalysis(true);
 
-      // ★ DBに保存（filterDescをcompany_idの代わりに使用。複数企業・キーワード検索に対応）
+      // ★ DBに保存
       const searchCompanyId  = selCompanies.length === 1 ? selCompanies[0] : null;
       const searchCompanyName = selCompanies.length === 1
         ? companies.find(c => c.id === selCompanies[0])?.name || selCompanies[0]
         : filterDesc;
       const saveFrom = dateFrom || "2000-01-01";
       const saveTo   = dateTo   || "2099-12-31";
+      // deepモードの注目特許は①②を連結して top_patent に保存
+      const topPatentForDB = deep
+        ? [r.topPatent1 ? "①"+r.topPatent1 : "", r.topPatent2 ? "②"+r.topPatent2 : ""].filter(Boolean).join("\n\n")
+        : r.topPatent;
       await sbSaveAnalysis({
         company_id:    searchCompanyId || ("search__" + encodeURIComponent(filterDesc).replace(/%/g,"").slice(0,30)),
         company_name:  searchCompanyName,
@@ -801,7 +844,7 @@ for (let b = 0; b < totalBatches; b++) {
         trends:        JSON.stringify(r.trends),
         impact2050:    r.impact2050,
         strategic:     r.strategic,
-        top_patent:    r.topPatent,
+        top_patent:    topPatentForDB,
         analyzed_at:   new Date().toISOString(),
       });
     } catch(e) { setErr("AI分析エラー: "+e.message); setAnalyzePhase("idle"); }
@@ -886,9 +929,13 @@ for (let b = 0; b < totalBatches; b++) {
           {loading ? "検索中..." : "🔍 検索"}
         </button>
         {/* ★ 表示中の特許をAI分析 */}
-        <button onClick={doAnalyzeResults} disabled={!results.length||analyzePhase==="analyzing"}
-          style={{width:"100%",padding:"8px",borderRadius:7,border:"none",background:!results.length||analyzePhase==="analyzing"?"#1a3550":c.amber,color:!results.length||analyzePhase==="analyzing"?c.muted:"#000",fontWeight:700,fontSize:12,cursor:!results.length||analyzePhase==="analyzing"?"not-allowed":"pointer",marginBottom:6}}>
-          {analyzePhase==="analyzing" ? "🤖 全件取得・分析中..." : "🤖 絞り込み全件をAI分析（全"+totalCount+"件）"}
+        <button onClick={() => doAnalyzeResults(false)} disabled={!results.length||analyzePhase==="analyzing"}
+          style={{width:"100%",padding:"8px",borderRadius:7,border:"none",background:!results.length||analyzePhase==="analyzing"?"#1a3550":c.amber,color:!results.length||analyzePhase==="analyzing"?c.muted:"#000",fontWeight:700,fontSize:12,cursor:!results.length||analyzePhase==="analyzing"?"not-allowed":"pointer",marginBottom:4}}>
+          {analyzePhase==="analyzing" && !analysis?.deep ? "🤖 分析中..." : "🤖 AI分析（標準）（全"+totalCount+"件）"}
+        </button>
+        <button onClick={() => doAnalyzeResults(true)} disabled={!results.length||analyzePhase==="analyzing"}
+          style={{width:"100%",padding:"8px",borderRadius:7,border:"none",background:!results.length||analyzePhase==="analyzing"?"#1a3550":"#6d28d9",color:!results.length||analyzePhase==="analyzing"?c.muted:"#fff",fontWeight:700,fontSize:12,cursor:!results.length||analyzePhase==="analyzing"?"not-allowed":"pointer",marginBottom:6}}>
+          {analyzePhase==="analyzing" && analysis?.deep ? "🔬 詳細分析中（全文）..." : "🔬 詳細AI分析（全文）（全"+totalCount+"件）"}
         </button>
         <button onClick={downloadCSV} disabled={!results.length}
           style={{width:"100%",padding:"8px",borderRadius:7,border:"1px solid "+(results.length?c.green:c.border),background:"transparent",color:results.length?c.green:c.muted,fontSize:12,cursor:results.length?"pointer":"not-allowed"}}>
@@ -931,24 +978,34 @@ for (let b = 0; b < totalBatches; b++) {
 
         {/* ★ AI分析結果パネル */}
         {analyzePhase==="analyzing" && (
-          <div style={{padding:"20px 24px",background:c.bg1,borderRadius:10,border:"1px solid "+c.amber,marginBottom:16}}>
+          <div style={{padding:"20px 24px",background:c.bg1,borderRadius:10,border:"1px solid "+(analysis?.deep?"#6d28d9":c.amber),marginBottom:16}}>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
-              <span style={{fontSize:18}}>🤖</span>
-              <span style={{fontSize:13,color:c.amber,fontWeight:600}}>
+              <span style={{fontSize:18}}>{analysis?.deep?"🔬":"🤖"}</span>
+              <span style={{fontSize:13,color:analysis?.deep?"#a78bfa":c.amber,fontWeight:600}}>
                 {analysis?._progress?.phase === "synthesis"
                   ? "統合分析中（全バッチを統合しています）..."
                   : analysis?._progress
-                    ? "バッチ分析中... "+analysis._progress.done+"/"+analysis._progress.total+"バッチ完了"
+                    ? (analysis.deep?"【詳細モード】":"")+"バッチ分析中... "+analysis._progress.done+"/"+analysis._progress.total+"バッチ完了"
                     : "全件取得中..."}
               </span>
             </div>
+            {analysis?._deepStats && (
+              <div style={{fontSize:10,color:"#a78bfa",marginBottom:8,padding:"4px 8px",background:"#1e1040",borderRadius:4}}>
+                全文クレーム: {analysis._deepStats.claimsCount}件/{analysis._deepStats.total}件
+                （{Math.round(analysis._deepStats.claimsCount/analysis._deepStats.total*100)}%）　
+                説明文: {analysis._deepStats.descCount}件/{analysis._deepStats.total}件
+                （{Math.round(analysis._deepStats.descCount/analysis._deepStats.total*100)}%）
+              </div>
+            )}
             {analysis?._progress && (
               <>
                 <div style={{height:5,background:c.bg2,borderRadius:3,overflow:"hidden",marginBottom:6}}>
                   <div style={{height:"100%",borderRadius:3,
                     background:analysis._progress.phase==="synthesis"
                       ? "linear-gradient(90deg,"+c.green+",#6ee7b7)"
-                      : "linear-gradient(90deg,"+c.amber+",#fcd34d)",
+                      : analysis.deep
+                        ? "linear-gradient(90deg,#6d28d9,#a78bfa)"
+                        : "linear-gradient(90deg,"+c.amber+",#fcd34d)",
                     width:analysis._progress.phase==="synthesis"
                       ? "100%"
                       : (analysis._progress.done/analysis._progress.total*100)+"%",
@@ -957,16 +1014,17 @@ for (let b = 0; b < totalBatches; b++) {
                 <div style={{fontSize:10,color:c.muted}}>
                   {analysis._progress.phase==="synthesis"
                     ? "全"+analysis._progress.total+"バッチの結果を統合中..."
-                    : analysis._progress.done+"バッチ完了 / 残り"+(analysis._progress.total-analysis._progress.done)+"バッチ（1バッチ=50件）"}
+                    : analysis._progress.done+"バッチ完了 / 残り"+(analysis._progress.total-analysis._progress.done)+"バッチ（1バッチ="+(analysis.deep?"20":"50")+"件）"}
                 </div>
               </>
             )}
           </div>
         )}
         {analysis && analysis.categories && showAnalysis && (
-          <div style={{background:c.bg1,borderRadius:10,border:"1px solid "+c.amber,marginBottom:16,overflow:"hidden"}}>
-            <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",background:"#1a1200",borderBottom:"1px solid "+c.border,flexWrap:"wrap"}}>
-              <span style={{fontSize:12,fontWeight:700,color:c.amber}}>🤖 AI分析結果</span>
+          <div style={{background:c.bg1,borderRadius:10,border:"1px solid "+(analysis.deep?"#6d28d9":c.amber),marginBottom:16,overflow:"hidden"}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",background:analysis.deep?"#160d30":"#1a1200",borderBottom:"1px solid "+c.border,flexWrap:"wrap"}}>
+              <span style={{fontSize:12,fontWeight:700,color:analysis.deep?"#a78bfa":c.amber}}>{analysis.deep?"🔬 詳細AI分析結果":"🤖 AI分析結果"}</span>
+              {analysis.deep && <span style={{fontSize:10,color:"#a78bfa",padding:"1px 7px",borderRadius:4,background:"#2d1060",border:"1px solid #6d28d9"}}>全文クレーム・説明文使用</span>}
               <span style={{fontSize:11,color:c.cyan,padding:"1px 7px",borderRadius:4,background:"#0c2d42",border:"1px solid "+c.border}}>{analysis.totalCount}件</span>
               {analysis.totalBatches>1 && <span style={{fontSize:11,color:c.green,padding:"1px 7px",borderRadius:4,background:"#0a1e0a",border:"1px solid "+c.green}}>{analysis.totalBatches}バッチ分析</span>}
               <span style={{fontSize:11,color:c.muted}}>{analysis.filterDesc}</span>
@@ -994,9 +1052,9 @@ for (let b = 0; b < totalBatches; b++) {
               </div>
               <div style={{display:"flex",flexDirection:"column",gap:10}}>
                 <div>
-                  <div style={{fontSize:11,fontWeight:700,color:c.amber,marginBottom:6}}>主要イノベーション動向</div>
+                  <div style={{fontSize:11,fontWeight:700,color:analysis.deep?"#a78bfa":c.amber,marginBottom:6}}>主要イノベーション動向</div>
                   {analysis.trends.map((t,i) => (
-                    <div key={i} style={{marginBottom:8,paddingLeft:8,borderLeft:"2px solid "+c.amber}}>
+                    <div key={i} style={{marginBottom:8,paddingLeft:8,borderLeft:"2px solid "+(analysis.deep?"#6d28d9":c.amber)}}>
                       <div style={{fontSize:11,fontWeight:600,color:c.text,marginBottom:2}}>{t.title}</div>
                       <div style={{fontSize:10,color:c.muted,lineHeight:1.6}}>{t.body}</div>
                     </div>
@@ -1010,10 +1068,24 @@ for (let b = 0; b < totalBatches; b++) {
                   <div style={{fontSize:10,fontWeight:700,color:c.purple,marginBottom:4}}>戦略的示唆</div>
                   <div style={{fontSize:11,color:c.text,lineHeight:1.65}}>{analysis.strategic}</div>
                 </div>
+                {/* 標準モード：注目特許1件 */}
                 {analysis.topPatent && (
                   <div style={{padding:"8px 10px",background:c.bg2,borderRadius:6,border:"1px solid "+c.cyan}}>
                     <div style={{fontSize:10,color:c.cyan,marginBottom:3}}>★ 最注目特許</div>
                     <div style={{fontSize:11,color:c.text,lineHeight:1.5}}>{analysis.topPatent}</div>
+                  </div>
+                )}
+                {/* 詳細モード：注目特許2件 */}
+                {analysis.topPatent1 && (
+                  <div style={{padding:"8px 10px",background:"#0d0820",borderRadius:6,border:"1px solid #6d28d9"}}>
+                    <div style={{fontSize:10,color:"#a78bfa",marginBottom:3}}>★ 最注目特許①</div>
+                    <div style={{fontSize:11,color:c.text,lineHeight:1.65}}>{analysis.topPatent1}</div>
+                  </div>
+                )}
+                {analysis.topPatent2 && (
+                  <div style={{padding:"8px 10px",background:"#0d0820",borderRadius:6,border:"1px solid #6d28d9"}}>
+                    <div style={{fontSize:10,color:"#a78bfa",marginBottom:3}}>★ 最注目特許②</div>
+                    <div style={{fontSize:11,color:c.text,lineHeight:1.65}}>{analysis.topPatent2}</div>
                   </div>
                 )}
               </div>
