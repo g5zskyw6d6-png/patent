@@ -249,25 +249,22 @@ export default function Dashboard({ supabaseUrl, supabaseKey, claudeApiKey, epoC
     // まずRPCを試みる
     try {
       await sbRpc("upsert_portfolio_analysis", row);
-      return; // 成功したら終了
+      return;
     } catch(e) {
       console.warn("RPC upsert failed, falling back to DELETE+INSERT:", e.message);
     }
 
     // フォールバック: DELETE + INSERT（Safari CORS対応・409回避）
-    // ① 同一キー (company_id, date_from, date_to) の既存レコードを削除
     const delUrl = supabaseUrl + "/rest/v1/portfolio_analyses"
       + "?company_id=eq." + encodeURIComponent(row.company_id)
-      + "&date_from=eq." + encodeURIComponent(row.date_from)
-      + "&date_to=eq."   + encodeURIComponent(row.date_to);
+      + "&date_from=eq."  + encodeURIComponent(row.date_from)
+      + "&date_to=eq."    + encodeURIComponent(row.date_to);
     const delRes = await fetch(delUrl, { method: "DELETE", headers: authHeaders });
     if (!delRes.ok) {
       const txt = await delRes.text().catch(() => "");
       console.warn("DEL portfolio_analyses failed:", delRes.status, txt);
-      // DELETEが失敗しても続行（レコードが存在しない場合もある）
     }
 
-    // ② 新しいレコードをINSERT
     const insRes = await fetch(supabaseUrl + "/rest/v1/portfolio_analyses", {
       method: "POST", headers: jsonHeaders, body: JSON.stringify([row]),
     });
