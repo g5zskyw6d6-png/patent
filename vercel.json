@@ -1,12 +1,8 @@
 {
-  "rewrites": [
-    {
-      "source": "/api/epo/auth/accesstoken",
-      "destination": "/api/epo-auth"
-    },
-    {
-      "source": "/api/epo/:path*",
-      "destination": "/api/epo-proxy?path=:path*"
-    }
-  ]
+  "crons": [
+    { "path": "/api/enrich-classifications", "schedule": "* * * * *" }
+  ],
+  "functions": {
+    "api/enrich-classifications.js": { "maxDuration": 60 }
+  }
 }

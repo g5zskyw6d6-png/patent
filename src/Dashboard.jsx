@@ -2215,7 +2215,7 @@ function KeywordsTab({ sbGet, claudePost, companies, c, card }) {
       let offset = 0;
       while (true) {
         const rows = await sbGet(
-          "patents?"+baseFilter+"select=patent_number,title_en,abstract_epo"
+	"patents?"+baseFilter+"select=patent_number,title_en,abstract_epo,claims_independent,description_text"
           +"&limit="+PAGE+"&offset="+offset+"&order=publication_date.desc"
         );
         if (!rows || rows.length === 0) break;
@@ -2257,6 +2257,8 @@ function KeywordsTab({ sbGet, claudePost, companies, c, card }) {
           p.title_en || "",
           p.abstract_epo || "",
           summaryMap[p.patent_number] || "",
+          p.claims_independent || "",
+          p.description_text || "",
         ]);
         const result = extractKeywordsSimple(texts, 50);
         setKeywords(result);
@@ -2274,7 +2276,11 @@ function KeywordsTab({ sbGet, claudePost, companies, c, card }) {
           const batch = patents.slice(i, i + BATCH);
           const textBlock = batch.map((p, idx) => {
             const summary = summaryMap[p.patent_number] || "";
-            return (idx+1)+". "+p.title_en+(p.abstract_epo ? " / "+p.abstract_epo.slice(0,100) : "")+(summary ? " / "+summary.slice(0,80) : "");
+            return (idx+1)+". "+p.title_en
+              +(p.abstract_epo        ? " / "+p.abstract_epo.slice(0,100)        : "")
+              +(summary               ? " / "+summary.slice(0,80)                : "")
+              +(p.claims_independent  ? " / Claims: "+p.claims_independent.slice(0,100) : "")
+              +(p.description_text    ? " / Desc: "+p.description_text.slice(0,100)     : "");
           }).join("\n");
 
           const text = await claudePost(
