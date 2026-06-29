@@ -23,8 +23,8 @@
 // ★要確認は元スクリプトと同じ [A]番号書式 / [B]JSONパス / [C]間隔
 // =============================================================================
 
-const BATCH = 3;
-const REQUEST_DELAY_MS = 500;
+const BATCH = 25;
+const REQUEST_DELAY_MS = 600;
 const MAX_RETRY = 1;
 const OPS_BASE = 'https://ops.epo.org/3.2';
 
