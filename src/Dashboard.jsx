@@ -280,7 +280,7 @@ export default function Dashboard({ supabaseUrl, supabaseKey, claudeApiKey, epoC
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
         const controller = new AbortController();
-        const timeoutId  = setTimeout(() => controller.abort(), 60000); // 60秒タイムアウト
+        const timeoutId  = setTimeout(() => controller.abort(), 200000); // 200秒タイムアウト
         let res;
         try {
           res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -669,12 +669,12 @@ const [claimsFetchPhase, setClaimsFetchPhase] = useState("idle");
       }
 
       // ② モード別パラメーター
-      const BATCH_SIZE    = deep ? 20  : 50;
-      const ABSTRACT_WORDS = deep ? 9999 : 80;   // deepは全文
-      const CLAIMS_WORDS   = deep ? 9999 : 50;   // deepは全文
-      const DESC_WORDS     = deep ? 1000 : 0;    // 標準は含まない
-      const BATCH_TOKENS   = deep ? 2400 : 1200;
-      const SYNTH_TOKENS   = deep ? 3000 : 2000;
+      const BATCH_SIZE    = deep ? 50  : 100;
+      const ABSTRACT_WORDS = deep ? 200 : 80;
+      const CLAIMS_WORDS   = deep ? 300 : 50;
+      const DESC_WORDS     = deep ? 300 : 0;    // 標準は含まない
+      const BATCH_TOKENS   = deep ? 2000 : 1200;
+      const SYNTH_TOKENS   = deep ? 2500 : 2000;
 
       // deepモード：クレーム・説明文保有率を事前集計して表示
       if (deep) {
@@ -847,7 +847,39 @@ const [claimsFetchPhase, setClaimsFetchPhase] = useState("idle");
         top_patent:    topPatentForDB,
         analyzed_at:   new Date().toISOString(),
       });
-    } catch(e) { setErr("AI分析エラー: "+e.message); setAnalyzePhase("idle"); }
+    } catch(e) {
+      // ★ 途中まで取得できていたバッチ結果があれば簡易表示する
+      if (typeof batchResults !== "undefined" && batchResults.length > 0) {
+        const partialCategories = {};
+        batchResults.forEach(br => {
+          br.categories.forEach(c => {
+            if (!partialCategories[c.name]) partialCategories[c.name] = { name:c.name, pct:0, desc:c.desc, count:0 };
+            partialCategories[c.name].pct += c.pct;
+            partialCategories[c.name].count += 1;
+          });
+        });
+        const avgCategories = Object.values(partialCategories).map(c => ({
+          name: c.name, pct: Math.round(c.pct / c.count), desc: c.desc
+        })).sort((a,b)=>b.pct-a.pct).slice(0,5);
+
+        setAnalysis({
+          filterDesc: "（部分結果："+batchResults.length+"/"+(typeof totalBatches!=="undefined"?totalBatches:"?")+"バッチ完了時点で中断）",
+          totalCount: batchResults.reduce((s,br)=>s+br.count,0),
+          totalBatches: batchResults.length,
+          batchResults,
+          categories: avgCategories,
+          trends: batchResults.flatMap(br=>br.trends).slice(0,3),
+          impact2050: "",
+          strategic: "",
+          topPatent: batchResults.map(br=>br.notable).filter(Boolean).join(" / "),
+        });
+        setAnalyzePhase("done"); setShowAnalysis(true);
+        setErr("⚠️ 分析が途中で中断されました（"+batchResults.length+"バッチ分のみ表示・統合分析は未実施）。再度実行してください。エラー: "+e.message);
+      } else {
+        setErr("AI分析エラー: "+e.message);
+        setAnalyzePhase("idle");
+      }
+    }
   };
 
   const toggleCompany = id => setSelCompanies(prev => prev.includes(id) ? prev.filter(x=>x!==id) : [...prev,id]);
