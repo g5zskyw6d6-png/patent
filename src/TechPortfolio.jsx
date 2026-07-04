@@ -145,13 +145,19 @@ export default function TechPortfolio({ supabaseUrl, supabaseKey /*, c, card */ 
   }, [cube]);
   const rowTot = useCallback((slug, ym) => cols.reduce((s,c)=>s+cnt(slug,c.id,ym),0), [cols, cnt]);
 
-  // 対象企業(グループ絞り + グループ順 + 名前順)
+  // 全企業の母集団(大分類データ tech_signals_patent 基準)。
+  // これを使うことで、サブカテゴリに降りても表示企業が減らない(全ゼロなら "·" 表示)。
+  const allSlugs = useMemo(
+    () => Array.from(new Set(rowsTop.map(r => r.canonical_slug))),
+    [rowsTop]
+  );
+
+  // 対象企業(グループ絞り + グループ順 + 名前順)。ビューに関わらず全企業を表示。
   const activeCompanies = useMemo(() => {
-    const slugs = Object.keys(cube).filter(slug => cols.some(c => cnt(slug, c.id, "all") > 0));
-    return slugs
+    return allSlugs
       .filter(slug => groupFilter === "all" || coGroup(slug) === groupFilter)
       .sort((a,b)=> groupOrder(a)-groupOrder(b) || coName(a).localeCompare(coName(b)));
-  }, [cube, cols, cnt, groupFilter, coGroup, groupOrder, coName]);
+  }, [allSlugs, groupFilter, coGroup, groupOrder, coName]);
 
   // 選択企業が現ビューにいなければ先頭へ
   useEffect(() => {
@@ -379,8 +385,7 @@ function Seg({ label, value, onChange, opts }) {
 
 // ===== スタイル(後で c/card に寄せる。今はプロトタイプ相当の自前) ============
 const STYLES = {
-  wrap:{fontFamily:"'Noto Sans JP',system-ui,sans-serif", color:"#12151F",
-        height:"100%", overflowY:"auto", paddingBottom:40},
+  wrap:{fontFamily:"'Noto Sans JP',system-ui,sans-serif", color:"#12151F"},
   controls:{display:"flex", flexWrap:"wrap", gap:"20px 32px", alignItems:"flex-end", marginBottom:20},
   ctrlLabel:{fontFamily:"monospace", fontSize:10, letterSpacing:".14em", textTransform:"uppercase", color:"#9AA1B0", display:"block", marginBottom:6},
   seg:{display:"inline-flex", border:"1px solid #CFD4DF", borderRadius:8, overflow:"hidden", background:"#fff"},
