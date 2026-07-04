@@ -1,8 +1,0 @@
-{
-  "crons": [
-    { "path": "/api/enrich-classifications", "schedule": "* * * * *" }
-  ],
-  "functions": {
-    "api/enrich-classifications.js": { "maxDuration": 60 }
-  }
-}
