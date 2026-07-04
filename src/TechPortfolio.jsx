@@ -379,7 +379,8 @@ function Seg({ label, value, onChange, opts }) {
 
 // ===== スタイル(後で c/card に寄せる。今はプロトタイプ相当の自前) ============
 const STYLES = {
-  wrap:{fontFamily:"'Noto Sans JP',system-ui,sans-serif", color:"#12151F"},
+  wrap:{fontFamily:"'Noto Sans JP',system-ui,sans-serif", color:"#12151F",
+        height:"100%", overflowY:"auto", paddingBottom:40},
   controls:{display:"flex", flexWrap:"wrap", gap:"20px 32px", alignItems:"flex-end", marginBottom:20},
   ctrlLabel:{fontFamily:"monospace", fontSize:10, letterSpacing:".14em", textTransform:"uppercase", color:"#9AA1B0", display:"block", marginBottom:6},
   seg:{display:"inline-flex", border:"1px solid #CFD4DF", borderRadius:8, overflow:"hidden", background:"#fff"},
