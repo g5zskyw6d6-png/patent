@@ -81,9 +81,9 @@ export default function TechPortfolio({ supabaseUrl, supabaseKey /*, c, card */ 
       try {
         setLoading(true);
         const [tax, top, sub, cos] = await Promise.all([
-          sbGetInt("technology_taxonomy?select=id,code,name_ja,parent_id,level,sort_order&order=sort_order"),
-          sbGetInt("tech_signals_patent?select=canonical_slug,taxonomy_id,year,patent_count"),
-          sbGetInt("tech_signals_subcat?select=canonical_slug,taxonomy_id,year,patent_count"),
+          sbGetInt("technology_taxonomy?select=id,code,name_ja,parent_id,level,sort_order&order=sort_order&limit=100000"),
+          sbGetInt("tech_signals_patent?select=canonical_slug,taxonomy_id,year,patent_count&limit=100000"),
+          sbGetInt("tech_signals_subcat?select=canonical_slug,taxonomy_id,year,patent_count&limit=100000"),
           sbGetPub("companies?select=id,name,group_id"),
         ]);
         if (!alive) return;
