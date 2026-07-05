@@ -449,7 +449,7 @@ useEffect(() => {
     { id:"manage",   label:"⚙️ 企業管理" },
     { id:"keywords",  label:"🏷️ キーワード" },
     { id:"tech",     label:"🧭 技術ポートフォリオ" },
-　　 {id:"research", label:"🔬 研究→IP転換"},
+　　 { id:"research", label:"🔬 研究→IP転換"},
   ];
 
   return (
