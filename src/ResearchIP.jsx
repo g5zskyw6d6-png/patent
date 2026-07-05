@@ -172,7 +172,7 @@ export default function ResearchIP({ supabaseUrl, supabaseKey }) {
       return val > 2 || val < 0.3 ? "#fff" : "#1e293b";
     }
     const pct = Math.sqrt((typeof val === "number" ? val : 0) / maxVal);
-    return pct > 0.4 ? "#fff" : "#1e293b";
+    return pct > 0.12 ? "#fff" : "#1e293b";
   };
 
   const rowTotal = useCallback((slug) => {
