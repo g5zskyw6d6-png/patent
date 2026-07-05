@@ -335,8 +335,7 @@ const S = {
   th: { padding: "8px 10px", textAlign: "left", fontSize: 11, fontWeight: 600, color: "#64748b",
         borderBottom: "2px solid #e2e8f0", whiteSpace: "nowrap", position: "sticky", top: 0, background: "#fff", zIndex: 2 },
   thCat: { padding: "6px 4px", textAlign: "center", fontSize: 10, fontWeight: 600, color: "#64748b",
-           borderBottom: "2px solid #e2e8f0", whiteSpace: "nowrap", position: "sticky", top: 0, background: "#fff", zIndex: 2,
-           writingMode: "vertical-rl", height: 80 },
+           borderBottom: "2px solid #e2e8f0", whiteSpace: "nowrap", position: "sticky", top: 0, background: "#fff", zIndex: 2 },
   tr: { transition: "background .1s" },
   trSelected: { background: "#f0f9ff" },
   trGroupBorder: { borderTop: "2px solid #cbd5e1" },
@@ -344,7 +343,7 @@ const S = {
             position: "sticky", left: 0, background: "#fff", zIndex: 1, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" },
   groupTag: { display: "block", fontSize: 9, color: "#94a3b8", fontWeight: 400, lineHeight: 1 },
   tdCell: { padding: "3px 2px", textAlign: "center", borderBottom: "1px solid #f8fafc", minWidth: 44, transition: "background .15s" },
-  cellText: { fontSize: 10, fontFamily: "'JetBrains Mono', monospace" },
+  cellText: { fontSize: 10, fontFamily: "'JetBrains Mono', monospace", color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,0.5)" },
   tdTotal: { padding: "3px 6px", textAlign: "right", borderBottom: "1px solid #f1f5f9", fontWeight: 600,
              fontSize: 10, fontFamily: "'JetBrains Mono', monospace", color: "#475569" },
   // 詳細パネル
