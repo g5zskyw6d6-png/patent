@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import TechPortfolio from "./TechPortfolio";
-
+import ResearchIP from "./ResearchIP";
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    Dashboard.jsx — 分析・解説・比較・概要の全機能ハブ
@@ -449,6 +449,7 @@ useEffect(() => {
     { id:"manage",   label:"⚙️ 企業管理" },
     { id:"keywords",  label:"🏷️ キーワード" },
     { id:"tech",     label:"🧭 技術ポートフォリオ" },
+　　 {id:"research", label:"🔬 研究→IP転換"},
   ];
 
   return (
@@ -482,7 +483,7 @@ useEffect(() => {
       {tab === "manage"    && <ManageTab    supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} companies={companies} onRefresh={onClose} c={c} card={card}/>}
       {tab === "keywords"  && <KeywordsTab  sbGet={sbGet} claudePost={claudePost} companies={companies} c={c} card={card}/>}
       {tab === "tech"      && <TechPortfolio supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} c={c} card={card}/>}
-
+　　　　{tab === "research" && <ResearchIP supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} />}
       <style>{`input[type=date]::-webkit-calendar-picker-indicator{filter:invert(0.6);}::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:#1a3550;border-radius:3px;}`}</style>
     </div>
   );
