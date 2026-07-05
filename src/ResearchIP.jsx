@@ -167,12 +167,7 @@ export default function ResearchIP({ supabaseUrl, supabaseKey }) {
 
   const textColor = (val) => {
     if (val == null || val === 0) return "#94a3b8";
-    if (mode === "ratio") {
-      if (val === Infinity) return "#fff";
-      return val > 2 || val < 0.3 ? "#fff" : "#1e293b";
-    }
-    const pct = Math.sqrt((typeof val === "number" ? val : 0) / maxVal);
-    return pct > 0.12 ? "#fff" : "#1e293b";
+    return "#fff";
   };
 
   const rowTotal = useCallback((slug) => {
