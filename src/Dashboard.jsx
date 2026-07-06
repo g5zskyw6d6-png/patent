@@ -443,7 +443,6 @@ useEffect(() => {
 
   const TABS = [
     { id:"search",   label:"🔍 検索・閲覧" },
-　　　{ id:"papers", label:"📄 論文検索" },
     { id:"analyze",  label:"🤖 AI分析" },
     { id:"summaries",label:"✨ AI解説生成" },
     { id:"compare",  label:"📊 企業比較" },
@@ -476,7 +475,7 @@ useEffect(() => {
       </div>
 
       {/* タブコンテンツ */}
-      {tab === "search"    && <SearchTab    sbRpc={sbRpc} fetchDescription={fetchDescription} fetchClaims={fetchClaims} claudePost={claudePost} sbPost={sbPost} sbUpsert={sbUpsert} sbSaveAnalysis={sbSaveAnalysis} supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} companies={companiesWithStats} c={c} card={card}/>}
+      {tab === "search"    && <SearchOrPaper sbRpc={sbRpc} fetchDescription={fetchDescription} fetchClaims={fetchClaims} claudePost={claudePost} sbPost={sbPost} sbUpsert={sbUpsert} sbSaveAnalysis={sbSaveAnalysis} supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} claudeApiKey={claudeApiKey} companies={companiesWithStats} c={c} card={card}/>}
       {tab === "analyze"   && <AnalyzeTab   sbGet={sbGet} supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} companies={companies} c={c} card={card}/>}
 
       {tab === "summaries" && <SummariesTab sbGet={sbGet} sbUpsert={sbUpsert} claudePost={claudePost} companies={companies} supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} c={c} card={card}/>}
@@ -486,7 +485,6 @@ useEffect(() => {
       {tab === "keywords"  && <KeywordsTab  sbGet={sbGet} claudePost={claudePost} companies={companies} c={c} card={card}/>}
       {tab === "tech"      && <TechPortfolio supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} c={c} card={card}/>}
 　　　　{tab === "research" && <ResearchIP supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} />}
-	{tab === "papers" && <PaperExplorer supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} />}
       <style>{`input[type=date]::-webkit-calendar-picker-indicator{filter:invert(0.6);}::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:#1a3550;border-radius:3px;}`}</style>
     </div>
   );
@@ -2482,4 +2480,32 @@ function KeywordsTab({ sbGet, claudePost, companies, c, card }) {
       )}
     </div>
   );
+/* ━━━ 検索タブ統合ラッパー(特許/論文 切替) ━━━ */
+function SearchOrPaper(props) {
+  const [dataSource, setDataSource] = useState("patent");
+  const { c, card } = props;
+  return (
+    <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+      <div style={{display:"flex",gap:4,padding:"8px 16px",background:c.bg1,borderBottom:"1px solid "+c.border,flexShrink:0}}>
+        <button onClick={()=>setDataSource("patent")}
+          style={{padding:"5px 18px",borderRadius:6,border:"1px solid "+(dataSource==="patent"?c.cyan:c.border),
+            background:dataSource==="patent"?c.bg3:"transparent",color:dataSource==="patent"?c.cyan:c.muted,
+            fontSize:12,cursor:"pointer",fontWeight:dataSource==="patent"?700:400}}>
+          📋 特許
+        </button>
+        <button onClick={()=>setDataSource("paper")}
+          style={{padding:"5px 18px",borderRadius:6,border:"1px solid "+(dataSource==="paper"?"#34d399":c.border),
+            background:dataSource==="paper"?c.bg3:"transparent",color:dataSource==="paper"?"#34d399":c.muted,
+            fontSize:12,cursor:"pointer",fontWeight:dataSource==="paper"?700:400}}>
+          📄 論文
+        </button>
+      </div>
+      {dataSource === "patent"
+        ? <SearchTab {...props} />
+        : <PaperExplorer supabaseUrl={props.supabaseUrl} supabaseKey={props.supabaseKey}
+            claudeApiKey={props.claudeApiKey} companies={props.companies} c={c} card={card} />
+      }
+    </div>
+  );
+}
 }

@@ -1,40 +1,62 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 
 // =============================================================================
-// PaperExplorer v2 — 論文検索・閲覧(特許UIに準拠)
+// PaperExplorer v3 — ダークテーマ + AI解説 + AI分析
+// =============================================================================
+// Dashboard.jsx の SearchTab と同じ場所に統合して使う。
+// props: supabaseUrl, supabaseKey, claudeApiKey, companies, c, card
 // =============================================================================
 
-export default function PaperExplorer({ supabaseUrl, supabaseKey }) {
-  const [companies, setCompanies] = useState([]);
+export default function PaperExplorer({ supabaseUrl, supabaseKey, claudeApiKey, companies, c, card }) {
   const [results, setResults]     = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading]     = useState(false);
-  const [detail, setDetail]       = useState(null);
+  const [err, setErr]             = useState("");
 
   const [keyword, setKeyword]       = useState("");
   const [companySlug, setCompanySlug] = useState("");
   const [yearFilter, setYearFilter] = useState("");
   const [sortBy, setSortBy]         = useState("cited_by_count");
   const [page, setPage]             = useState(0);
-  const PAGE_SIZE = 30;
+  const PAGE_SIZE = 20;
+
+  // 詳細・AI
+  const [openId, setOpenId]         = useState(null);
+  const [aiPhase, setAiPhase]       = useState("idle");  // idle | loading | done
+  const [aiResult, setAiResult]     = useState(null);
+  const [batchPhase, setBatchPhase] = useState("idle");   // idle | analyzing | done
+  const [batchResult, setBatchResult] = useState(null);
+  const [batchProgress, setBatchProgress] = useState({ done: 0, total: 0 });
 
   const GROUP_LABELS = { group_west: "欧米", group_china: "中国", group_japan: "日本", group_beauty: "化粧品" };
-
-  useEffect(() => {
-    fetch(`${supabaseUrl}/rest/v1/companies?select=id,name,group_id&order=group_id,name&limit=100`, {
-      headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
-    }).then(r => r.json()).then(d => setCompanies(Array.isArray(d) ? d : []));
-  }, []);
-
-  const coMap = useMemo(() => Object.fromEntries(companies.map(c => [c.id, c])), [companies]);
+  const coMap = useMemo(() => Object.fromEntries((companies || []).map(co => [co.id, co])), [companies]);
   const coName = (slug) => coMap[slug]?.name || slug;
+
+  // ---- Claude API ----
+  const claudePost = useCallback(async (prompt, maxTokens = 1500) => {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": claudeApiKey,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: maxTokens,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+    if (!res.ok) throw new Error("Claude API error: " + res.status);
+    const data = await res.json();
+    return data.content?.[0]?.text || "";
+  }, [claudeApiKey]);
 
   // ---- 検索 ----
   const doSearch = useCallback(async (newPage = 0) => {
-    setLoading(true);
+    setLoading(true); setErr(""); setOpenId(null); setAiResult(null); setAiPhase("idle");
     setPage(newPage);
-    setDetail(null);
-
     let filters = [];
     if (keyword.trim()) {
       const kw = keyword.trim().replace(/%/g, "");
@@ -42,31 +64,20 @@ export default function PaperExplorer({ supabaseUrl, supabaseKey }) {
     }
     if (companySlug) filters.push(`company_slug=eq.${companySlug}`);
     if (yearFilter) filters.push(`publication_year=eq.${yearFilter}`);
-
-    const orderCol = sortBy === "year" ? "publication_year.desc,cited_by_count.desc"
-                   : "cited_by_count.desc,publication_year.desc";
-    const offset = newPage * PAGE_SIZE;
-
+    const orderCol = sortBy === "year" ? "publication_year.desc,cited_by_count.desc" : "cited_by_count.desc,publication_year.desc";
     const qs = [
       "select=openalex_id,doi,title,publication_year,cited_by_count,is_oa,oa_url,source_name,type,company_slug,abstract_text,topics",
-      ...filters,
-      `order=${orderCol}`,
-      `limit=${PAGE_SIZE}`,
-      `offset=${offset}`,
+      ...filters, `order=${orderCol}`, `limit=${PAGE_SIZE}`, `offset=${newPage * PAGE_SIZE}`,
     ].join("&");
-
     try {
       const res = await fetch(`${supabaseUrl}/rest/v1/papers_search?${qs}`, {
-        headers: {
-          apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}`,
-          "Accept-Profile": "openalex", Prefer: "count=estimated",
-        }
+        headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}`, "Accept-Profile": "openalex", Prefer: "count=estimated" }
       });
       const cr = res.headers.get("content-range");
       if (cr) { const m = cr.match(/\/(\d+)/); if (m) setTotalCount(parseInt(m[1])); }
       const data = await res.json();
       setResults(Array.isArray(data) ? data : []);
-    } catch (e) { console.error(e); setResults([]); }
+    } catch (e) { setErr("検索エラー: " + e.message); setResults([]); }
     setLoading(false);
   }, [keyword, companySlug, yearFilter, sortBy, supabaseUrl, supabaseKey]);
 
@@ -74,153 +85,291 @@ export default function PaperExplorer({ supabaseUrl, supabaseKey }) {
 
   const parseTopics = (raw) => {
     if (!raw) return [];
-    try { const p = typeof raw === "string" ? JSON.parse(raw) : raw; return Array.isArray(p) ? p : []; }
-    catch { return []; }
+    try { const p = typeof raw === "string" ? JSON.parse(raw) : raw; return Array.isArray(p) ? p : []; } catch { return []; }
+  };
+
+  // ---- AI解説(個別論文) ----
+  const doAiExplain = async (paper) => {
+    setAiPhase("loading"); setAiResult(null);
+    try {
+      const topics = parseTopics(paper.topics).map(t => t.display_name).join(", ");
+      const text = await claudePost(
+        `以下の学術論文を、特許アナリストの視点で日本語で解説してください。\n\n`
+        + `タイトル: ${paper.title}\n`
+        + `発行年: ${paper.publication_year}\n`
+        + `掲載誌: ${paper.source_name || "不明"}\n`
+        + `被引用数: ${paper.cited_by_count}\n`
+        + `トピック: ${topics}\n`
+        + `要約: ${paper.abstract_text || "(なし)"}\n\n`
+        + `以下の観点で解説してください:\n`
+        + `1. 技術概要(この研究が何を解決しようとしているか)\n`
+        + `2. 技術的新規性(従来手法と比べた革新点)\n`
+        + `3. 産業応用可能性(どのような製品・サービスに応用できるか)\n`
+        + `4. 関連する特許領域(この研究が特許化される場合、どのIPC分類に該当しそうか)\n`
+        + `5. 2040年に向けた将来展望\n`
+        + `6. 総合評価スコア(革新性/産業応用性/将来性を各10点満点で)\n\n`
+        + `各セクションは見出し付きで、わかりやすく記述してください。`, 2000
+      );
+      setAiResult(text);
+      setAiPhase("done");
+    } catch (e) { setErr("AI解説エラー: " + e.message); setAiPhase("idle"); }
+  };
+
+  // ---- AI分析(検索結果全体) ----
+  const doAiBatchAnalysis = async () => {
+    setBatchPhase("analyzing"); setBatchResult(null);
+    try {
+      // 全件取得(最大500件)
+      let filters = [];
+      if (keyword.trim()) filters.push(`or=(title.ilike.*${keyword.trim()}*,abstract_text.ilike.*${keyword.trim()}*)`);
+      if (companySlug) filters.push(`company_slug=eq.${companySlug}`);
+      if (yearFilter) filters.push(`publication_year=eq.${yearFilter}`);
+      const qs = ["select=openalex_id,title,publication_year,cited_by_count,source_name,company_slug,abstract_text,topics",
+        ...filters, "order=cited_by_count.desc", "limit=500"].join("&");
+      const res = await fetch(`${supabaseUrl}/rest/v1/papers_search?${qs}`, {
+        headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}`, "Accept-Profile": "openalex" }
+      });
+      const allPapers = await res.json();
+      if (!allPapers.length) { setErr("分析対象の論文がありません"); setBatchPhase("idle"); return; }
+
+      const BATCH = 50;
+      const batches = [];
+      for (let i = 0; i < allPapers.length; i += BATCH) batches.push(allPapers.slice(i, i + BATCH));
+      const batchSummaries = [];
+
+      for (let b = 0; b < batches.length; b++) {
+        setBatchProgress({ done: b, total: batches.length });
+        const batch = batches[b];
+        const list = batch.map((p, i) => {
+          const co = coName(p.company_slug);
+          const abs = (p.abstract_text || "").split(/\s+/).slice(0, 100).join(" ");
+          return `${i + 1}. [${p.publication_year}] ${p.title} — ${co} (cited:${p.cited_by_count})\n   ${abs}`;
+        }).join("\n");
+
+        const bText = await claudePost(
+          `あなたは技術インテリジェンスアナリストです。以下の学術論文バッチを分析し、技術動向を抽出してください。\n\n`
+          + `バッチ${b + 1}/${batches.length} (${batch.length}件):\n${list}\n\n`
+          + `以下の形式で回答:\n`
+          + `THEME1:テーマ名|説明(2文)\n`
+          + `THEME2:テーマ名|説明(2文)\n`
+          + `THEME3:テーマ名|説明(2文)\n`
+          + `NOTABLE:最注目論文のタイトルと革新点(2文)`, 1200
+        );
+        batchSummaries.push(bText);
+        if (b < batches.length - 1) await new Promise(r => setTimeout(r, 600));
+      }
+
+      setBatchProgress({ done: batches.length, total: batches.length });
+
+      // 統合分析
+      const filterDesc = [
+        keyword ? `キーワード: "${keyword}"` : null,
+        companySlug ? `企業: ${coName(companySlug)}` : null,
+        yearFilter ? `年: ${yearFilter}` : null,
+      ].filter(Boolean).join(" / ") || "フィルターなし";
+
+      const synthesis = await claudePost(
+        `以下のバッチ分析結果を統合して、研究動向の総合レポートを日本語で作成してください。\n\n`
+        + `対象: ${allPapers.length}件の学術論文 (${filterDesc})\n\n`
+        + `バッチ分析結果:\n${batchSummaries.join("\n---\n")}\n\n`
+        + `以下の構成で記述してください:\n`
+        + `## 主要研究テーマ(上位5つ、各テーマに3文の説明)\n`
+        + `## 技術トレンド(3つ、各トレンドに4文の分析)\n`
+        + `## 産業への示唆(この研究群が示す産業変化の方向性)\n`
+        + `## 最注目論文(2件、各2文で紹介)\n`
+        + `## IP転換の可能性(この研究群で特許化が進みそうな領域の予測)`, 2500
+      );
+
+      setBatchResult(synthesis);
+      setBatchPhase("done");
+    } catch (e) { setErr("AI分析エラー: " + e.message); setBatchPhase("idle"); }
   };
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   return (
-    <div style={S.wrap}>
-      {/* ========== 検索パネル ========== */}
-      <div style={S.searchPanel}>
-        <div style={S.searchTitle}>📄 論文検索</div>
-        <div style={S.searchGrid}>
-          <div style={S.fieldGroup}>
-            <label style={S.label}>キーワード</label>
-            <input style={S.input} type="text" placeholder="英語で入力（例: transformer, battery, LiDAR）"
-              value={keyword} onChange={e => setKeyword(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && doSearch(0)} />
-          </div>
-          <div style={S.fieldGroup}>
-            <label style={S.label}>企業</label>
-            <select style={S.select} value={companySlug} onChange={e => setCompanySlug(e.target.value)}>
-              <option value="">すべて</option>
-              {Object.entries(GROUP_LABELS).map(([gid, label]) => (
-                <optgroup key={gid} label={label}>
-                  {companies.filter(c => c.group_id === gid).map(c =>
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  )}
-                </optgroup>
-              ))}
-            </select>
-          </div>
-          <div style={S.fieldGroup}>
-            <label style={S.label}>発行年</label>
-            <select style={S.select} value={yearFilter} onChange={e => setYearFilter(e.target.value)}>
-              <option value="">すべて</option>
-              {[2026,2025,2024,2023,2022].map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
-          </div>
-          <div style={S.fieldGroup}>
-            <label style={S.label}>並び順</label>
-            <select style={S.select} value={sortBy} onChange={e => setSortBy(e.target.value)}>
-              <option value="cited_by_count">被引用数</option>
-              <option value="year">新着</option>
-            </select>
-          </div>
+    <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+      {/* ===== 左: フィルタパネル ===== */}
+      <div style={{ width: 240, flexShrink: 0, padding: 14, borderRight: "1px solid " + c.border, overflowY: "auto", background: c.bg1 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: c.cyan, marginBottom: 14 }}>📄 論文検索</div>
+
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 10, color: c.muted, marginBottom: 4 }}>キーワード（英語）</div>
+          <input style={{ ...inputS, background: c.bg2, color: c.text, border: "1px solid " + c.border }}
+            placeholder="transformer, battery..." value={keyword}
+            onChange={e => setKeyword(e.target.value)} onKeyDown={e => e.key === "Enter" && doSearch(0)} />
         </div>
-        <div style={S.searchActions}>
-          <button style={S.primaryBtn} onClick={() => doSearch(0)}>
-            {loading ? "検索中..." : "検索"}
-          </button>
-          <button style={S.secondaryBtn} onClick={() => {
-            setKeyword(""); setCompanySlug(""); setYearFilter(""); setSortBy("cited_by_count");
-          }}>リセット</button>
-          <span style={S.resultCount}>{totalCount.toLocaleString()} 件</span>
+
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 10, color: c.muted, marginBottom: 4 }}>企業</div>
+          <select style={{ ...selectS, background: c.bg2, color: c.text, border: "1px solid " + c.border }}
+            value={companySlug} onChange={e => setCompanySlug(e.target.value)}>
+            <option value="">すべて</option>
+            {Object.entries(GROUP_LABELS).map(([gid, label]) => (
+              <optgroup key={gid} label={label}>
+                {(companies || []).filter(co => co.group_id === gid).map(co =>
+                  <option key={co.id} value={co.id}>{co.name}</option>
+                )}
+              </optgroup>
+            ))}
+          </select>
         </div>
+
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 10, color: c.muted, marginBottom: 4 }}>発行年</div>
+          <select style={{ ...selectS, background: c.bg2, color: c.text, border: "1px solid " + c.border }}
+            value={yearFilter} onChange={e => setYearFilter(e.target.value)}>
+            <option value="">すべて</option>
+            {[2026, 2025, 2024, 2023, 2022].map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 10, color: c.muted, marginBottom: 4 }}>並び順</div>
+          <select style={{ ...selectS, background: c.bg2, color: c.text, border: "1px solid " + c.border }}
+            value={sortBy} onChange={e => setSortBy(e.target.value)}>
+            <option value="cited_by_count">被引用数</option>
+            <option value="year">新着</option>
+          </select>
+        </div>
+
+        <button onClick={() => doSearch(0)}
+          style={{ width: "100%", padding: "8px 0", borderRadius: 6, border: "none", background: c.cyan, color: "#000", fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 8 }}>
+          {loading ? "検索中..." : "🔍 検索"}
+        </button>
+        <button onClick={() => { setKeyword(""); setCompanySlug(""); setYearFilter(""); }}
+          style={{ width: "100%", padding: "6px 0", borderRadius: 6, border: "1px solid " + c.border, background: "transparent", color: c.muted, fontSize: 11, cursor: "pointer", marginBottom: 14 }}>
+          リセット
+        </button>
+
+        <div style={{ fontSize: 12, fontWeight: 700, color: c.cyan }}>{totalCount.toLocaleString()} 件</div>
+
+        {/* AI分析ボタン */}
+        {totalCount > 0 && (
+          <div style={{ marginTop: 16, borderTop: "1px solid " + c.border, paddingTop: 12 }}>
+            <button onClick={doAiBatchAnalysis} disabled={batchPhase === "analyzing"}
+              style={{ width: "100%", padding: "8px 0", borderRadius: 6, border: "none",
+                background: batchPhase === "analyzing" ? c.bg3 : "#818cf8", color: batchPhase === "analyzing" ? c.muted : "#fff",
+                fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+              {batchPhase === "analyzing" ? `🤖 分析中 ${batchProgress.done}/${batchProgress.total}` : "🤖 AI分析"}
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* ========== 検索結果 ========== */}
-      <div style={S.resultArea}>
+      {/* ===== 右: 結果エリア ===== */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "10px 16px" }}>
+        {err && <div style={{ padding: "8px 12px", background: "#1a1000", borderRadius: 6, fontSize: 11, color: c.amber, marginBottom: 10 }}>{err}</div>}
+
+        {/* AI分析結果 */}
+        {batchPhase === "done" && batchResult && (
+          <div style={{ ...card, marginBottom: 14, borderColor: "#818cf8" }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#818cf8", marginBottom: 8 }}>🤖 AI研究動向分析</div>
+            <div style={{ fontSize: 12, lineHeight: 1.8, color: c.text, whiteSpace: "pre-wrap" }}>{batchResult}</div>
+            <button onClick={() => setBatchResult(null)}
+              style={{ marginTop: 8, padding: "4px 12px", borderRadius: 4, border: "1px solid " + c.border, background: "transparent", color: c.muted, fontSize: 10, cursor: "pointer" }}>
+              閉じる
+            </button>
+          </div>
+        )}
+
         {results.length === 0 && !loading && (
-          <div style={S.empty}>検索条件に一致する論文がありません</div>
+          <div style={{ padding: 60, textAlign: "center", color: c.muted, fontSize: 14 }}>検索条件に一致する論文がありません</div>
         )}
 
         {results.map((r, idx) => {
           const topics = parseTopics(r.topics);
-          const isOpen = detail === r.openalex_id;
+          const isOpen = openId === r.openalex_id;
           return (
-            <div key={r.openalex_id + "_" + idx} style={S.card}>
+            <div key={r.openalex_id + "_" + idx} style={{ borderBottom: "1px solid " + c.border }}>
               {/* カードヘッダー */}
-              <div style={S.cardHeader} onClick={() => setDetail(isOpen ? null : r.openalex_id)}>
-                <div style={S.cardTitleRow}>
-                  <span style={S.cardTitle}>{r.title || "(タイトルなし)"}</span>
-                  <span style={S.expandIcon}>{isOpen ? "▼" : "▶"}</span>
+              <div style={{ padding: "10px 8px", cursor: "pointer" }}
+                onClick={() => { setOpenId(isOpen ? null : r.openalex_id); setAiPhase("idle"); setAiResult(null); }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0", lineHeight: 1.5, marginBottom: 4 }}>
+                  {r.title || "(タイトルなし)"}
                 </div>
-                <div style={S.cardMeta}>
-                  <span style={S.badge}>{r.publication_year}</span>
-                  <span style={S.badgeCompany}>{coName(r.company_slug)}</span>
-                  <span style={S.badgeType}>{r.type || "article"}</span>
-                  {r.is_oa && <span style={S.badgeOA}>OA</span>}
-                  <span style={S.citedCount}>被引用 {(r.cited_by_count || 0).toLocaleString()}</span>
-                  {r.source_name && <span style={S.sourceName}>{r.source_name}</span>}
+                <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", fontSize: 11 }}>
+                  <span style={{ padding: "1px 6px", background: "#1e1b4b", color: c.purple, borderRadius: 3, fontWeight: 700, fontSize: 10 }}>{r.publication_year}</span>
+                  <span style={{ padding: "1px 6px", background: "#052e16", color: c.green, borderRadius: 3, fontWeight: 600, fontSize: 10 }}>{coName(r.company_slug)}</span>
+                  <span style={{ padding: "1px 6px", background: c.bg2, color: c.muted, borderRadius: 3, fontSize: 10 }}>{r.type || "article"}</span>
+                  {r.is_oa && <span style={{ padding: "1px 6px", background: "#052e16", color: "#4ade80", borderRadius: 3, fontWeight: 700, fontSize: 10 }}>OA</span>}
+                  <span style={{ color: c.muted, fontFamily: "monospace", fontSize: 11, marginLeft: "auto" }}>被引用 {(r.cited_by_count || 0).toLocaleString()}</span>
                 </div>
                 {topics.length > 0 && (
-                  <div style={S.topicRow}>
+                  <div style={{ display: "flex", gap: 4, marginTop: 5, flexWrap: "wrap" }}>
                     {topics.slice(0, 3).map((t, i) =>
-                      <span key={i} style={S.topicTag}>{t.display_name}</span>
+                      <span key={i} style={{ fontSize: 9, padding: "1px 7px", background: c.bg2, borderRadius: 10, color: c.muted }}>{t.display_name}</span>
                     )}
                   </div>
                 )}
               </div>
 
-              {/* 展開時の詳細 */}
+              {/* 展開詳細 */}
               {isOpen && (
-                <div style={S.cardBody}>
-                  {/* リンクボタン行 */}
-                  <div style={S.linkRow}>
+                <div style={{ padding: "0 8px 14px" }}>
+                  {/* リンク行 */}
+                  <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
                     {r.oa_url && (
-                      <a href={r.oa_url} target="_blank" rel="noreferrer" style={S.oaBtn}>
-                        📖 全文を読む（Open Access）
+                      <a href={r.oa_url} target="_blank" rel="noreferrer"
+                        style={{ padding: "5px 12px", background: "#059669", color: "#fff", borderRadius: 5, fontSize: 11, fontWeight: 600, textDecoration: "none" }}>
+                        📖 全文を読む
                       </a>
                     )}
                     {r.doi && (
-                      <a href={`https://doi.org/${r.doi}`} target="_blank" rel="noreferrer" style={S.doiBtn}>
-                        🔗 DOI: {r.doi}
+                      <a href={`https://doi.org/${r.doi}`} target="_blank" rel="noreferrer"
+                        style={{ padding: "5px 12px", background: c.bg2, color: c.cyan, border: "1px solid " + c.border, borderRadius: 5, fontSize: 11, textDecoration: "none" }}>
+                        🔗 DOI
                       </a>
                     )}
-                    <a href={`https://openalex.org/${r.openalex_id}`} target="_blank" rel="noreferrer" style={S.oaLinkBtn}>
+                    <a href={`https://openalex.org/${r.openalex_id}`} target="_blank" rel="noreferrer"
+                      style={{ padding: "5px 12px", background: c.bg2, color: c.muted, border: "1px solid " + c.border, borderRadius: 5, fontSize: 11, textDecoration: "none" }}>
                       OpenAlex
                     </a>
+                    <button onClick={() => doAiExplain(r)} disabled={aiPhase === "loading"}
+                      style={{ padding: "5px 12px", background: aiPhase === "loading" ? c.bg3 : "#818cf8", color: "#fff", border: "none", borderRadius: 5, fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+                      {aiPhase === "loading" ? "⏳ 解説生成中..." : "🤖 AI解説"}
+                    </button>
                   </div>
 
                   {/* 要約 */}
                   {r.abstract_text && (
-                    <div style={S.abstractBox}>
-                      <div style={S.sectionLabel}>要約 (Abstract)</div>
-                      <div style={S.abstractText}>{r.abstract_text}</div>
+                    <div style={{ ...card, marginBottom: 10 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: c.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: 1 }}>Abstract</div>
+                      <div style={{ fontSize: 12, lineHeight: 1.8, color: c.text }}>{r.abstract_text}</div>
+                    </div>
+                  )}
+
+                  {/* AI解説結果 */}
+                  {aiPhase === "done" && aiResult && (
+                    <div style={{ ...card, borderColor: "#818cf8", marginBottom: 10 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#818cf8", marginBottom: 6 }}>🤖 AI解説</div>
+                      <div style={{ fontSize: 12, lineHeight: 1.8, color: c.text, whiteSpace: "pre-wrap" }}>{aiResult}</div>
                     </div>
                   )}
 
                   {/* 統計 */}
-                  <div style={S.statsRow}>
-                    <div style={S.statBox}>
-                      <div style={S.statNum}>{(r.cited_by_count || 0).toLocaleString()}</div>
-                      <div style={S.statLabel}>被引用数</div>
-                    </div>
-                    <div style={S.statBox}>
-                      <div style={S.statNum}>{r.publication_year}</div>
-                      <div style={S.statLabel}>発行年</div>
-                    </div>
-                    <div style={S.statBox}>
-                      <div style={S.statNum}>{r.is_oa ? "Yes" : "No"}</div>
-                      <div style={S.statLabel}>OA</div>
-                    </div>
-                    <div style={S.statBox}>
-                      <div style={S.statNum}>{r.type || "—"}</div>
-                      <div style={S.statLabel}>種別</div>
-                    </div>
+                  <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+                    {[
+                      { n: (r.cited_by_count || 0).toLocaleString(), l: "被引用数" },
+                      { n: r.publication_year, l: "発行年" },
+                      { n: r.is_oa ? "Yes" : "No", l: "OA" },
+                      { n: r.type || "—", l: "種別" },
+                    ].map((s, i) => (
+                      <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "6px 10px", background: c.bg2, borderRadius: 6 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: c.text, fontFamily: "monospace" }}>{s.n}</div>
+                        <div style={{ fontSize: 9, color: c.muted }}>{s.l}</div>
+                      </div>
+                    ))}
                   </div>
 
                   {/* トピック詳細 */}
                   {topics.length > 0 && (
-                    <div style={S.topicDetail}>
-                      <div style={S.sectionLabel}>トピック</div>
-                      {topics.map((t, i) => (
-                        <div key={i} style={S.topicDetailRow}>
-                          <span style={S.topicDetailName}>{t.display_name}</span>
-                          <span style={S.topicDetailField}>{t.domain} › {t.field} › {t.subfield}</span>
+                    <div style={{ marginTop: 10 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: c.muted, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>Topics</div>
+                      {parseTopics(r.topics).map((t, i) => (
+                        <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", borderBottom: "1px solid " + c.border, fontSize: 11 }}>
+                          <span style={{ color: c.text, fontWeight: 600 }}>{t.display_name}</span>
+                          <span style={{ color: c.muted, fontSize: 10 }}>{t.domain} › {t.field}</span>
                         </div>
                       ))}
                     </div>
@@ -230,87 +379,21 @@ export default function PaperExplorer({ supabaseUrl, supabaseKey }) {
             </div>
           );
         })}
-      </div>
 
-      {/* ========== ページネーション ========== */}
-      {totalPages > 1 && (
-        <div style={S.pagination}>
-          <button style={S.pageBtn} disabled={page === 0} onClick={() => doSearch(page - 1)}>← 前</button>
-          <span style={S.pageInfo}>
-            {page * PAGE_SIZE + 1}〜{Math.min((page + 1) * PAGE_SIZE, totalCount)} / {totalCount.toLocaleString()}件
-          </span>
-          <button style={S.pageBtn} disabled={page >= totalPages - 1} onClick={() => doSearch(page + 1)}>次 →</button>
-        </div>
-      )}
+        {/* ページネーション */}
+        {totalPages > 1 && (
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 16, padding: "14px 0" }}>
+            <button disabled={page === 0} onClick={() => doSearch(page - 1)}
+              style={{ padding: "5px 14px", borderRadius: 5, border: "1px solid " + c.border, background: "transparent", color: c.muted, fontSize: 12, cursor: "pointer" }}>← 前</button>
+            <span style={{ fontSize: 12, color: c.muted }}>{page * PAGE_SIZE + 1}〜{Math.min((page + 1) * PAGE_SIZE, totalCount)} / {totalCount.toLocaleString()}</span>
+            <button disabled={page >= totalPages - 1} onClick={() => doSearch(page + 1)}
+              style={{ padding: "5px 14px", borderRadius: 5, border: "1px solid " + c.border, background: "transparent", color: c.muted, fontSize: 12, cursor: "pointer" }}>次 →</button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
-// =============================================================================
-const S = {
-  wrap: { fontFamily: "'Noto Sans JP', system-ui, sans-serif", color: "#12151F",
-          maxHeight: "calc(100vh - 120px)", overflowY: "auto", display: "flex", flexDirection: "column" },
-  // 検索パネル
-  searchPanel: { padding: "16px 20px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0", flexShrink: 0 },
-  searchTitle: { fontSize: 15, fontWeight: 700, marginBottom: 10 },
-  searchGrid: { display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 10 },
-  fieldGroup: { display: "flex", flexDirection: "column", gap: 3 },
-  label: { fontSize: 10, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5 },
-  input: { padding: "7px 10px", border: "1px solid #d1d5db", borderRadius: 5,
-           fontSize: 13, outline: "none", fontFamily: "inherit", background: "#fff" },
-  select: { padding: "7px 8px", border: "1px solid #d1d5db", borderRadius: 5,
-            fontSize: 12, background: "#fff", cursor: "pointer", fontFamily: "inherit" },
-  searchActions: { display: "flex", gap: 8, marginTop: 10, alignItems: "center" },
-  primaryBtn: { padding: "7px 24px", background: "#4f46e5", color: "#fff", border: "none",
-                borderRadius: 5, fontSize: 13, fontWeight: 600, cursor: "pointer" },
-  secondaryBtn: { padding: "7px 16px", background: "#fff", color: "#475569", border: "1px solid #d1d5db",
-                  borderRadius: 5, fontSize: 12, cursor: "pointer" },
-  resultCount: { marginLeft: "auto", fontSize: 13, fontWeight: 700, color: "#4f46e5" },
-  // 結果エリア
-  resultArea: { flex: 1, overflowY: "auto", padding: "8px 20px" },
-  empty: { padding: 60, textAlign: "center", color: "#94a3b8", fontSize: 14 },
-  // カード
-  card: { borderBottom: "1px solid #e5e7eb", marginBottom: 2 },
-  cardHeader: { padding: "10px 12px", cursor: "pointer", borderRadius: 4, transition: "background .1s" },
-  cardTitleRow: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 },
-  cardTitle: { fontSize: 13, fontWeight: 600, lineHeight: 1.5, color: "#1e293b", flex: 1 },
-  expandIcon: { fontSize: 10, color: "#94a3b8", marginTop: 3, flexShrink: 0 },
-  cardMeta: { display: "flex", gap: 6, marginTop: 5, alignItems: "center", flexWrap: "wrap", fontSize: 11 },
-  badge: { padding: "1px 6px", background: "#eef2ff", color: "#4f46e5", borderRadius: 3, fontWeight: 700, fontSize: 10 },
-  badgeCompany: { padding: "1px 6px", background: "#f0fdf4", color: "#166534", borderRadius: 3, fontWeight: 600, fontSize: 10 },
-  badgeType: { padding: "1px 6px", background: "#f1f5f9", color: "#64748b", borderRadius: 3, fontSize: 10 },
-  badgeOA: { padding: "1px 6px", background: "#ecfdf5", color: "#059669", borderRadius: 3, fontWeight: 700, fontSize: 10 },
-  citedCount: { color: "#6b7280", fontFamily: "'JetBrains Mono', monospace", fontSize: 11 },
-  sourceName: { color: "#94a3b8", maxWidth: 250, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
-  topicRow: { display: "flex", gap: 4, marginTop: 5, flexWrap: "wrap" },
-  topicTag: { fontSize: 9, padding: "1px 7px", background: "#f1f5f9", borderRadius: 10, color: "#475569" },
-  // カード展開時
-  cardBody: { padding: "0 12px 14px", borderTop: "1px solid #f1f5f9" },
-  linkRow: { display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" },
-  oaBtn: { padding: "6px 14px", background: "#059669", color: "#fff", borderRadius: 5,
-           fontSize: 12, fontWeight: 600, textDecoration: "none", display: "inline-block" },
-  doiBtn: { padding: "6px 14px", background: "#fff", color: "#4f46e5", border: "1px solid #c7d2fe",
-            borderRadius: 5, fontSize: 11, textDecoration: "none", display: "inline-block" },
-  oaLinkBtn: { padding: "6px 14px", background: "#fff", color: "#64748b", border: "1px solid #d1d5db",
-               borderRadius: 5, fontSize: 11, textDecoration: "none", display: "inline-block" },
-  abstractBox: { marginTop: 12, padding: "12px 14px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb" },
-  sectionLabel: { fontSize: 10, fontWeight: 700, color: "#94a3b8", marginBottom: 6,
-                  textTransform: "uppercase", letterSpacing: 1 },
-  abstractText: { fontSize: 12.5, lineHeight: 1.8, color: "#334155" },
-  statsRow: { display: "flex", gap: 16, marginTop: 14 },
-  statBox: { display: "flex", flexDirection: "column", alignItems: "center", padding: "8px 12px",
-             background: "#f8fafc", borderRadius: 6, minWidth: 70 },
-  statNum: { fontSize: 16, fontWeight: 700, color: "#1e293b", fontFamily: "'JetBrains Mono', monospace" },
-  statLabel: { fontSize: 9, color: "#94a3b8", marginTop: 2 },
-  topicDetail: { marginTop: 12 },
-  topicDetailRow: { display: "flex", justifyContent: "space-between", padding: "4px 0",
-                    borderBottom: "1px solid #f1f5f9", fontSize: 11, gap: 12 },
-  topicDetailName: { fontWeight: 600, color: "#1e293b" },
-  topicDetailField: { color: "#94a3b8", fontSize: 10, textAlign: "right" },
-  // ページネーション
-  pagination: { display: "flex", justifyContent: "center", alignItems: "center", gap: 16,
-                padding: "12px 0", borderTop: "1px solid #e5e7eb", flexShrink: 0 },
-  pageBtn: { padding: "6px 16px", border: "1px solid #d1d5db", borderRadius: 5, background: "#fff",
-             cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "inherit" },
-  pageInfo: { fontSize: 12, color: "#64748b" },
-};
+const inputS = { width: "100%", padding: "6px 8px", borderRadius: 5, fontSize: 12, outline: "none", fontFamily: "inherit" };
+const selectS = { width: "100%", padding: "6px 8px", borderRadius: 5, fontSize: 12, cursor: "pointer", fontFamily: "inherit" };
