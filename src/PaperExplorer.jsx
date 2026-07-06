@@ -186,11 +186,14 @@ export default function PaperExplorer({ supabaseUrl, supabaseKey, claudeApiKey, 
 
       // DB保存
       fetch(`${supabaseUrl}/rest/v1/paper_analyses`,{method:"POST",
-        headers:{apikey:supabaseKey,Authorization:`Bearer ${supabaseKey}`,"Content-Type":"application/json",Prefer:"return=minimal","Content-Profile":"openalex"},
-        body:JSON.stringify({filter_desc:filterDesc,total_papers:allPapers.length,
-          categories:JSON.stringify(finalAnalysis.categories),trends:JSON.stringify(finalAnalysis.trends),
-          impact2040:finalAnalysis.impact2050,strategic:finalAnalysis.strategic,notable:finalAnalysis.topPatent})
-      }).then(()=>setErr("✅ AI分析結果をDBに保存しました")).catch(e=>console.warn("分析DB保存失敗:",e));
+  headers:{apikey:supabaseKey,Authorization:`Bearer ${supabaseKey}`,"Content-Type":"application/json",Prefer:"return=minimal","Content-Profile":"openalex"},
+  body:JSON.stringify({filter_desc:filterDesc,total_papers:allPapers.length,
+    categories:JSON.stringify(finalAnalysis.categories),trends:JSON.stringify(finalAnalysis.trends),
+    impact2040:finalAnalysis.impact2050,strategic:finalAnalysis.strategic,notable:finalAnalysis.topPatent})
+}).then(async res=>{
+  if(res.ok){ setErr("✅ AI分析結果をDBに保存しました"); }
+  else{ const t=await res.text().catch(()=>""); setErr("⚠️ DB保存失敗 ("+res.status+"): "+t); }
+}).catch(e=>setErr("⚠️ DB保存エラー: "+e.message));
     }catch(e){setErr("AI分析エラー: "+e.message);setAnalyzePhase("idle");}
   };
 
