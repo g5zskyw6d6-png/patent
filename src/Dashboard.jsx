@@ -1452,17 +1452,16 @@ function PatentDetailInline({ patent, fetchDescription, fetchClaims, claudePost,
    🤖 AI分析タブ（ポートフォリオ分析 — DBデータを使用）
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 function AnalyzeTab({ sbGet, supabaseUrl, supabaseKey, companies, c, card }) {
-  const [allAnalyses, setAllAnalyses] = useState([]);
+  const [allAnalyses, setAllAnalyses] = useState([]);   // 特許分析(portfolio_analyses)
+  const [allPaperAnalyses, setAllPaperAnalyses] = useState([]); // 論文分析(paper_analyses)
   const [selRow,      setSelRow]      = useState(null);  // 選択中の分析レコード
+  const [selKind,     setSelKind]     = useState(null);  // "patent" | "paper"
   const [analysis,    setAnalysis]    = useState(null);
   const [loading,     setLoading]     = useState(false);
   const [err,         setErr]         = useState("");
   const [showList,    setShowList]    = useState(true);
 
-  // マウント時にDB内の全ポートフォリオ分析を取得
-  useEffect(() => {
-    loadAllAnalyses();
-  }, []);
+  useEffect(() => { loadAllAnalyses(); loadAllPaperAnalyses(); }, []);
 
   const loadAllAnalyses = async () => {
     try {
@@ -1473,8 +1472,19 @@ function AnalyzeTab({ sbGet, supabaseUrl, supabaseKey, companies, c, card }) {
     } catch(e) {}
   };
 
+  const loadAllPaperAnalyses = async () => {
+    try {
+      const res = await fetch(
+        (supabaseUrl||"") + "/rest/v1/paper_analyses?select=id,filter_desc,total_papers,analyzed_at&order=analyzed_at.desc&limit=200",
+        { headers: { apikey: supabaseKey, Authorization: "Bearer "+supabaseKey, "Accept-Profile": "openalex" } }
+      );
+      const rows = await res.json();
+      setAllPaperAnalyses(Array.isArray(rows) ? rows : []);
+    } catch(e) {}
+  };
+
   const selectRow = async (row) => {
-    setSelRow(row); setLoading(true); setErr(""); setAnalysis(null);
+    setSelRow(row); setSelKind("patent"); setLoading(true); setErr(""); setAnalysis(null);
     try {
       const rows = await sbGet(
         "portfolio_analyses?company_id=eq."+row.company_id
@@ -1485,7 +1495,7 @@ function AnalyzeTab({ sbGet, supabaseUrl, supabaseKey, companies, c, card }) {
         const r = rows[0];
         const cats   = typeof r.categories === "string" ? JSON.parse(r.categories) : (r.categories || []);
         const trends = typeof r.trends     === "string" ? JSON.parse(r.trends)     : (r.trends     || []);
-        setAnalysis({ categories:cats, trends, impact2050:r.impact2050, strategic:r.strategic, topPatent:r.top_patent, analyzedAt:r.analyzed_at, totalPatents:r.total_patents });
+        setAnalysis({ kind:"patent", categories:cats, trends, impact2050:r.impact2050, strategic:r.strategic, topPatent:r.top_patent, analyzedAt:r.analyzed_at, totalPatents:r.total_patents });
       } else {
         setErr("分析データを取得できませんでした。");
       }
@@ -1493,34 +1503,70 @@ function AnalyzeTab({ sbGet, supabaseUrl, supabaseKey, companies, c, card }) {
     setLoading(false);
   };
 
-  const co = selRow ? companies.find(c => c.id === selRow.company_id) : null;
+  const selectPaperRow = async (row) => {
+    setSelRow(row); setSelKind("paper"); setLoading(true); setErr(""); setAnalysis(null);
+    try {
+      const res = await fetch(
+        (supabaseUrl||"") + "/rest/v1/paper_analyses?id=eq."+row.id+"&select=*",
+        { headers: { apikey: supabaseKey, Authorization: "Bearer "+supabaseKey, "Accept-Profile": "openalex" } }
+      );
+      const rows = await res.json();
+      if (rows && rows.length > 0) {
+        const r = rows[0];
+        const cats   = typeof r.categories === "string" ? JSON.parse(r.categories) : (r.categories || []);
+        const trends = typeof r.trends     === "string" ? JSON.parse(r.trends)     : (r.trends     || []);
+        setAnalysis({ kind:"paper", categories:cats, trends, impact2050:r.impact2040, strategic:r.strategic, topPatent:r.notable, analyzedAt:r.analyzed_at, totalPatents:r.total_papers, filterDesc:r.filter_desc });
+      } else {
+        setErr("分析データを取得できませんでした。");
+      }
+    } catch(e) { setErr("取得エラー: "+e.message); }
+    setLoading(false);
+  };
+
+  const deletePaperAnalysis = async (row, e) => {
+    e.stopPropagation();
+    if (!window.confirm("この論文分析データを削除しますか？")) return;
+    try {
+      await fetch((supabaseUrl||"") + "/rest/v1/paper_analyses?id=eq."+row.id,
+        { method:"DELETE", headers:{ apikey: supabaseKey, Authorization:"Bearer "+supabaseKey, "Accept-Profile":"openalex" } });
+      setAllPaperAnalyses(prev => prev.filter(x => x.id !== row.id));
+      if (selKind === "paper" && selRow?.id === row.id) { setSelRow(null); setAnalysis(null); }
+    } catch(err) { alert("削除失敗: "+err.message); }
+  };
+
+  const co = (selKind === "patent" && selRow) ? companies.find(c => c.id === selRow.company_id) : null;
+  const totalCount = allAnalyses.length + allPaperAnalyses.length;
 
   return (
     <div style={{display:"flex",flex:1,overflow:"hidden"}}>
 
-      {/* 左：一覧パネル */}
-      <div style={{width:280,borderRight:"1px solid "+c.border,background:c.bg1,display:"flex",flexDirection:"column",flexShrink:0}}>
+      {/* 左：一覧パネル(幅220: 検索・閲覧と統一) */}
+      <div style={{width:220,borderRight:"1px solid "+c.border,background:c.bg1,display:"flex",flexDirection:"column",flexShrink:0}}>
         <div style={{padding:"12px 14px 8px",borderBottom:"1px solid "+c.border}}>
           <div style={{fontSize:12,fontWeight:700,color:c.purple,marginBottom:4}}>📋 DB保存済みの分析一覧</div>
-          <div style={{fontSize:11,color:c.muted}}>{allAnalyses.length}件 ／ 「絞り込み全件をAI分析」で追加されます</div>
+          <div style={{fontSize:11,color:c.muted}}>{totalCount}件</div>
         </div>
         <div style={{flex:1,overflowY:"auto",padding:"8px"}}>
-          {allAnalyses.length === 0 && (
+          {totalCount === 0 && (
             <div style={{textAlign:"center",paddingTop:40,color:c.muted}}>
               <div style={{fontSize:20,marginBottom:8}}>📊</div>
-              <div style={{fontSize:12,lineHeight:1.8}}>まだ分析データがありません。<br/>「検索・閲覧」タブの<br/>「絞り込み全件をAI分析」から<br/>分析を実施してください。</div>
+              <div style={{fontSize:12,lineHeight:1.8}}>まだ分析データがありません。<br/>「検索・閲覧」タブの<br/>「AI分析」から<br/>分析を実施してください。</div>
             </div>
+          )}
+
+          {/* 特許分析 */}
+          {allAnalyses.length > 0 && (
+            <div style={{fontSize:10,fontWeight:700,color:c.cyan,margin:"4px 4px 6px",letterSpacing:".05em"}}>📋 特許分析</div>
           )}
           {allAnalyses.map((row, i) => {
             const rowCo   = companies.find(c => c.id === row.company_id);
-            const isActive = selRow?.company_id === row.company_id && selRow?.date_from === row.date_from && selRow?.date_to === row.date_to;
+            const isActive = selKind==="patent" && selRow?.company_id === row.company_id && selRow?.date_from === row.date_from && selRow?.date_to === row.date_to;
             return (
-              <div key={i}
+              <div key={"pat"+i}
                 style={{padding:"10px 12px",borderRadius:7,marginBottom:4,background:isActive?"#0c2d42":"transparent",border:"1px solid "+(isActive?c.cyan:c.border),transition:"background .1s"}}>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4,cursor:"pointer"}} onClick={() => selectRow(row)}>
                   <span style={{fontSize:13}}>{rowCo?.flag || "🔍"}</span>
-                  <span style={{fontSize:12,fontWeight:600,color:isActive?c.cyan:c.text,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",cursor:"pointer"}}
-                    onClick={() => selectRow(row)}>
+                  <span style={{fontSize:12,fontWeight:600,color:isActive?c.cyan:c.text,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",cursor:"pointer"}}>
                     {row.company_name}
                   </span>
                   {isActive && <span style={{fontSize:9,color:c.cyan,padding:"1px 5px",borderRadius:3,border:"1px solid "+c.cyan,flexShrink:0}}>表示中</span>}
@@ -1545,9 +1591,41 @@ function AnalyzeTab({ sbGet, supabaseUrl, supabaseKey, companies, c, card }) {
                           { method:"DELETE", headers:{"apikey": (typeof supabaseKey !== "undefined" ? supabaseKey : ""), "Authorization":"Bearer "+(typeof supabaseKey !== "undefined" ? supabaseKey : "")} }
                         );
                         setAllAnalyses(prev => prev.filter((_, idx) => idx !== i));
-                        if (isActive) { setSelRow(null); setAnalysis(null); }
+                        if (selKind==="patent" && isActive) { setSelRow(null); setAnalysis(null); }
                       } catch(err) { alert("削除失敗: "+err.message); }
                     }}
+                    style={{padding:"3px 8px",borderRadius:4,border:"1px solid #dc2626",background:"transparent",color:"#dc2626",fontSize:10,cursor:"pointer",flexShrink:0}}>
+                    🗑
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* 論文分析 */}
+          {allPaperAnalyses.length > 0 && (
+            <div style={{fontSize:10,fontWeight:700,color:"#34d399",margin:"12px 4px 6px",letterSpacing:".05em"}}>📄 論文分析</div>
+          )}
+          {allPaperAnalyses.map((row, i) => {
+            const isActive = selKind==="paper" && selRow?.id === row.id;
+            return (
+              <div key={"pap"+i}
+                style={{padding:"10px 12px",borderRadius:7,marginBottom:4,background:isActive?"#052e2b":"transparent",border:"1px solid "+(isActive?"#34d399":c.border),transition:"background .1s"}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4,cursor:"pointer"}} onClick={() => selectPaperRow(row)}>
+                  <span style={{fontSize:13}}>📄</span>
+                  <span style={{fontSize:12,fontWeight:600,color:isActive?"#34d399":c.text,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",cursor:"pointer"}}>
+                    {row.filter_desc || "フィルターなし"}
+                  </span>
+                  {isActive && <span style={{fontSize:9,color:"#34d399",padding:"1px 5px",borderRadius:3,border:"1px solid #34d399",flexShrink:0}}>表示中</span>}
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:6,marginTop:4}}>
+                  <div style={{flex:1,cursor:"pointer"}} onClick={() => selectPaperRow(row)}>
+                    <div style={{display:"flex",justifyContent:"space-between",marginTop:2}}>
+                      <span style={{fontSize:10,color:c.muted}}>{row.total_papers}件</span>
+                      <span style={{fontSize:10,color:c.muted}}>{new Date(row.analyzed_at).toLocaleDateString("ja-JP")}</span>
+                    </div>
+                  </div>
+                  <button onClick={(e) => deletePaperAnalysis(row, e)}
                     style={{padding:"3px 8px",borderRadius:4,border:"1px solid #dc2626",background:"transparent",color:"#dc2626",fontSize:10,cursor:"pointer",flexShrink:0}}>
                     🗑
                   </button>
@@ -1566,7 +1644,7 @@ function AnalyzeTab({ sbGet, supabaseUrl, supabaseKey, companies, c, card }) {
             <div style={{fontSize:15,fontWeight:600,color:c.text,marginBottom:8}}>AI分析結果ビューア</div>
             <div style={{fontSize:13,lineHeight:1.9}}>
               左の一覧から分析結果を選択してください<br/>
-              <span style={{fontSize:11,color:c.muted}}>新しい分析は「検索・閲覧」タブの「絞り込み全件をAI分析」から実施できます</span>
+              <span style={{fontSize:11,color:c.muted}}>特許・論文どちらの分析も表示できます</span>
             </div>
           </div>
         )}
@@ -1585,28 +1663,48 @@ function AnalyzeTab({ sbGet, supabaseUrl, supabaseKey, companies, c, card }) {
             {/* ヘッダー */}
             <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16,flexWrap:"wrap"}}>
               <div>
-                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
-                  <span style={{fontSize:16}}>{co?.flag || "🔍"}</span>
-                  <span style={{fontSize:16,fontWeight:700,color:c.cyan}}>{selRow.company_name}</span>
-                </div>
-                <div style={{fontSize:11,color:c.muted}}>
-                  {selRow.date_from} 〜 {selRow.date_to} ／ 対象: {analysis.totalPatents}件 ／ 分析日時: {new Date(analysis.analyzedAt).toLocaleString("ja-JP")}
-                </div>
-              </div>
-              <button
-                onClick={() => printToPDF(
-                  selRow.company_name + "_AI分析レポート",
-                  generatePortfolioHTML(co || {name: selRow.company_name}, analysis, {total_patents: analysis.totalPatents, analyzed_at: analysis.analyzedAt})
+                {analysis.kind === "patent" ? (
+                  <>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+                      <span style={{fontSize:16}}>{co?.flag || "🔍"}</span>
+                      <span style={{fontSize:16,fontWeight:700,color:c.cyan}}>{selRow.company_name}</span>
+                      <span style={{fontSize:10,padding:"2px 8px",borderRadius:4,background:"#0c2d42",color:c.cyan,border:"1px solid "+c.cyan}}>特許</span>
+                    </div>
+                    <div style={{fontSize:11,color:c.muted}}>
+                      {selRow.date_from} 〜 {selRow.date_to} ／ 対象: {analysis.totalPatents}件 ／ 分析日時: {new Date(analysis.analyzedAt).toLocaleString("ja-JP")}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+                      <span style={{fontSize:16}}>📄</span>
+                      <span style={{fontSize:16,fontWeight:700,color:"#34d399"}}>{analysis.filterDesc}</span>
+                      <span style={{fontSize:10,padding:"2px 8px",borderRadius:4,background:"#052e2b",color:"#34d399",border:"1px solid #34d399"}}>論文</span>
+                    </div>
+                    <div style={{fontSize:11,color:c.muted}}>
+                      対象: {analysis.totalPatents}件 ／ 分析日時: {new Date(analysis.analyzedAt).toLocaleString("ja-JP")}
+                    </div>
+                  </>
                 )}
-                style={{marginLeft:"auto",padding:"6px 16px",borderRadius:6,border:"1px solid #16a34a",background:"transparent",color:"#16a34a",fontSize:12,fontWeight:600,cursor:"pointer"}}>
-                📄 PDFで出力する
-              </button>
+              </div>
+              {analysis.kind === "patent" && (
+                <button
+                  onClick={() => printToPDF(
+                    selRow.company_name + "_AI分析レポート",
+                    generatePortfolioHTML(co || {name: selRow.company_name}, analysis, {total_patents: analysis.totalPatents, analyzed_at: analysis.analyzedAt})
+                  )}
+                  style={{marginLeft:"auto",padding:"6px 16px",borderRadius:6,border:"1px solid #16a34a",background:"transparent",color:"#16a34a",fontSize:12,fontWeight:600,cursor:"pointer"}}>
+                  📄 PDFで出力する
+                </button>
+              )}
             </div>
 
-            {/* 分析結果グリッド */}
+            {/* 分析結果グリッド(特許・論文 共通フォーマット) */}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
               <div style={card}>
-                <div style={{fontSize:12,fontWeight:700,color:c.cyan,marginBottom:12}}>技術カテゴリー分類</div>
+                <div style={{fontSize:12,fontWeight:700,color:c.cyan,marginBottom:12}}>
+                  {analysis.kind === "patent" ? "技術カテゴリー分類" : "研究テーマ分類"}
+                </div>
                 {analysis.categories.map((cat,i) => (
                   <div key={i} style={{marginBottom:12}}>
                     <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
@@ -1622,7 +1720,9 @@ function AnalyzeTab({ sbGet, supabaseUrl, supabaseKey, companies, c, card }) {
               </div>
               <div style={{display:"flex",flexDirection:"column",gap:12}}>
                 <div style={card}>
-                  <div style={{fontSize:12,fontWeight:700,color:c.amber,marginBottom:10}}>主要イノベーション動向</div>
+                  <div style={{fontSize:12,fontWeight:700,color:c.amber,marginBottom:10}}>
+                    {analysis.kind === "patent" ? "主要イノベーション動向" : "主要研究トレンド"}
+                  </div>
                   {analysis.trends.map((t,i) => (
                     <div key={i} style={{marginBottom:10,paddingLeft:10,borderLeft:"2px solid "+c.amber}}>
                       <div style={{fontSize:12,fontWeight:600,color:c.text,marginBottom:3}}>{t.title}</div>
@@ -1631,16 +1731,22 @@ function AnalyzeTab({ sbGet, supabaseUrl, supabaseKey, companies, c, card }) {
                   ))}
                 </div>
                 <div style={card}>
-                  <div style={{fontSize:12,fontWeight:700,color:c.green,marginBottom:8}}>2050年 社会変革シナリオ</div>
+                  <div style={{fontSize:12,fontWeight:700,color:c.green,marginBottom:8}}>
+                    {analysis.kind === "patent" ? "2050年 社会変革シナリオ" : "2040年 社会実装シナリオ"}
+                  </div>
                   <div style={{fontSize:12,color:c.text,lineHeight:1.75}}>{analysis.impact2050}</div>
                 </div>
                 <div style={card}>
-                  <div style={{fontSize:12,fontWeight:700,color:c.purple,marginBottom:8}}>戦略的示唆</div>
+                  <div style={{fontSize:12,fontWeight:700,color:c.purple,marginBottom:8}}>
+                    {analysis.kind === "patent" ? "戦略的示唆" : "産業への戦略的示唆"}
+                  </div>
                   <div style={{fontSize:12,color:c.text,lineHeight:1.75}}>{analysis.strategic}</div>
                 </div>
                 {analysis.topPatent && (
                   <div style={{...card,borderColor:c.cyan}}>
-                    <div style={{fontSize:11,color:c.cyan,marginBottom:6}}>★ 最注目特許</div>
+                    <div style={{fontSize:11,color:c.cyan,marginBottom:6}}>
+                      {analysis.kind === "patent" ? "★ 最注目特許" : "★ 最注目論文"}
+                    </div>
                     <div style={{fontSize:12,color:c.text,lineHeight:1.65}}>{analysis.topPatent}</div>
                   </div>
                 )}
