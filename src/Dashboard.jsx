@@ -2480,6 +2480,7 @@ function KeywordsTab({ sbGet, claudePost, companies, c, card }) {
       )}
     </div>
   );
+}
 /* ━━━ 検索タブ統合ラッパー(特許/論文 切替) ━━━ */
 function SearchOrPaper(props) {
   const [dataSource, setDataSource] = useState("patent");
@@ -2507,5 +2508,4 @@ function SearchOrPaper(props) {
       }
     </div>
   );
-}
 }
