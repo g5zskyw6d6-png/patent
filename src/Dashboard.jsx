@@ -2256,33 +2256,6 @@ function KeywordsTab({ sbGet, claudePost, companies, supabaseUrl, supabaseKey, c
           sOffset += PAGE;
           await new Promise(r => setTimeout(r, 200));
         }
-      } else {
-        // ★ 論文モード：OpenAlex papers_search RPC
-        // buildKeywordFilter を使用して複雑なフィルターを構築
-        const kf = buildKeywordFilter(mode === "company" && selCompany ? "" : "");
-        const papersUrl = "papers_search?"
-          + `select=openalex_id,title,abstract_text,publication_year`
-          + (kf ? "&" + kf : "")
-          + `&order=publication_year.desc&limit=10000`;
-
-        const res = await fetch((supabaseUrl||"") + "/rest/v1/" + papersUrl, {
-          headers: { apikey: supabaseKey, Authorization: "Bearer "+supabaseKey, "Accept-Profile": "openalex", "Prefer": "count=estimated" }
-        }).catch(() => null);
-        if (!res || !res.ok) {
-          const errText = await res.text().catch(() => "");
-          setErr("論文データ取得失敗: HTTP " + (res?.status || "unknown") + " - " + errText.slice(0,100));
-          setPhase("idle");
-          return;
-        }
-        const rows = await res.json().catch(() => []);
-        if (!rows || rows.length === 0) {
-          setErr("論文データがありません");
-          setPhase("idle");
-          return;
-        }
-        allData.push(...rows);
-
-      }
 
       if (!allData || allData.length === 0) {
         setErr("特許データがありません。");
