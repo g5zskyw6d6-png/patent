@@ -1815,20 +1815,26 @@ function SummariesTab({ sbGet, sbUpsert, claudePost, companies, supabaseUrl, sup
         if (targets.length === 0) { setErr("すべての特許に解説が生成済みです。「未生成のみ」のチェックを外すと再生成できます。"); setPhase("idle"); return; }
 
       } else {
-        // ★ 論文の場合（OpenAlex）
+        // ★ 論文の場合（OpenAlex papers_search RPC）
         const yearFrom = dateFrom.slice(0, 4);
         const yearTo = dateTo.slice(0, 4);
-        // openalex.papers テーブルから検索
-        const paperUrl = "papers?or=(title.ilike.%"+encodeURIComponent(paperKeyword)+"%,abstract_text.ilike.%"+encodeURIComponent(paperKeyword)+"%)"
-          +"&publication_year=gte."+yearFrom
-          +"&publication_year=lte."+yearTo
-          +"&select=openalex_id,title,abstract_text,publication_year&limit=2000";
+        // papers_search RPC エンドポイントを使用
+        const searchParams = new URLSearchParams({
+          select: "openalex_id,title,abstract_text,publication_year",
+          limit: 2000
+        });
+        // キーワードフィルター: title または abstract_text に含まれるもの
+        const filterStr = `or=(title.ilike.%${encodeURIComponent(paperKeyword)}%,abstract_text.ilike.%${encodeURIComponent(paperKeyword)}%)`;
+        const paperUrl = "papers_search?" + filterStr
+          + "&publication_year=gte." + yearFrom
+          + "&publication_year=lte." + yearTo
+          + "&select=openalex_id,title,abstract_text,publication_year&limit=2000";
 
         // OpenAlex スキーマでの取得（プロファイル指定）
         const res = await fetch((supabaseUrl||"") + "/rest/v1/" + paperUrl, {
           headers: { apikey: supabaseKey, Authorization: "Bearer "+supabaseKey, "Accept-Profile": "openalex" }
         });
-        if (!res.ok) throw new Error("OpenAlex papers 取得失敗: HTTP "+res.status);
+        if (!res.ok) throw new Error("論文検索失敗: HTTP "+res.status);
         const allPapers = await res.json();
         if (!allPapers || allPapers.length === 0) { setErr("該当する論文がありません。キーワードを変更してください。"); setPhase("idle"); return; }
 
@@ -2313,41 +2319,45 @@ function KeywordsTab({ sbGet, claudePost, companies, supabaseUrl, supabaseKey, c
           await new Promise(r => setTimeout(r, 200));
         }
       } else {
-        // ★ 論文モード：OpenAlex データ
-        const authorFilter = mode === "company" && selCompany
-          ? `author~like.*${selCompany.name.replace(/\*|%/g, "")}*&` : "";
-        let offset = 0;
-        while (true) {
-          const papersUrl = "papers?"+authorFilter+"select=id,title,abstract_text,author"
-            +"&limit="+PAGE+"&offset="+offset+"&order=publication_year.desc";
-          const res = await fetch((supabaseUrl||"") + "/rest/v1/" + papersUrl, {
-            headers: { apikey: supabaseKey, Authorization: "Bearer "+supabaseKey, "Accept-Profile": "openalex" }
-          }).catch(() => null);
-          if (!res || !res.ok) break;
-          const rows = await res.json().catch(() => []);
-          if (!rows || rows.length === 0) break;
-          allData.push(...rows);
-          if (rows.length < PAGE) break;
-          offset += PAGE;
-          await new Promise(r => setTimeout(r, 200));
+        // ★ 論文モード：OpenAlex papers_search RPC
+        // papers_search RPC を使用して全論文データを取得
+        const papersUrl = "papers_search?select=openalex_id,title,abstract_text,publication_year"
+          +"&limit=10000&order=publication_year.desc";
+        const res = await fetch((supabaseUrl||"") + "/rest/v1/" + papersUrl, {
+          headers: { apikey: supabaseKey, Authorization: "Bearer "+supabaseKey, "Accept-Profile": "openalex" }
+        }).catch(() => null);
+        if (!res || !res.ok) {
+          setErr("論文データ取得失敗");
+          setPhase("idle");
+          return;
         }
+        const rows = await res.json().catch(() => []);
+        if (!rows || rows.length === 0) {
+          setErr("論文データがありません");
+          setPhase("idle");
+          return;
+        }
+        allData.push(...rows);
 
         // 論文サマリー取得（存在する場合）
-        let sOffset = 0;
-        const idSet = new Set(allData.map(p => p.id));
-        while (true) {
-          const summariesUrl = "paper_summaries?select=paper_id,abstract_ja&limit="+PAGE+"&offset="+sOffset;
-          const res = await fetch((supabaseUrl||"") + "/rest/v1/" + summariesUrl, {
+        const idSet = new Set(allData.map(p => p.openalex_id));
+        try {
+          const summariesUrl = "paper_summaries?select=openalex_id,abstract_ja&limit=10000";
+          const sumRes = await fetch((supabaseUrl||"") + "/rest/v1/" + summariesUrl, {
             headers: { apikey: supabaseKey, Authorization: "Bearer "+supabaseKey, "Accept-Profile": "openalex" }
-          }).catch(() => null);
-          if (!res || !res.ok) break;
-          const rows = await res.json().catch(() => []);
-          if (!rows || rows.length === 0) break;
-          rows.filter(s => idSet.has(s.paper_id)).forEach(s => {
-            summaryMap[s.paper_id] = s.abstract_ja;
           });
-          if (rows.length < PAGE) break;
-          sOffset += PAGE;
+          if (sumRes.ok) {
+            const sumRows = await sumRes.json();
+            if (Array.isArray(sumRows)) {
+              sumRows.forEach(s => {
+                if (s.openalex_id && idSet.has(s.openalex_id)) {
+                  summaryMap[s.openalex_id] = s.abstract_ja;
+                }
+              });
+            }
+          }
+        } catch(e) {
+          console.warn("論文サマリー取得スキップ:", e.message);
           await new Promise(r => setTimeout(r, 200));
         }
       }
