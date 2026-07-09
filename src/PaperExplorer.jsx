@@ -101,25 +101,28 @@ export default function PaperExplorer({ supabaseUrl, supabaseKey, claudeApiKey, 
         setResults(prev=>prev.map(r=>r.openalex_id===paper.openalex_id?{...r,title_ja:titleJa||r.title_ja,abstract_ja:abstractJa||r.abstract_ja}:r));
       }
 
-      // DB保存（非同期で実行、結果はユーザーに通知）
+      // DB保存（RPC関数で実行、結果はユーザーに通知）
       if(titleJa||abstractJa){
-        const patch={}; if(titleJa) patch.title_ja=titleJa; if(abstractJa) patch.abstract_ja=abstractJa;
         try{
-          console.log("🔍 DB保存開始:", {openalex_id: paper.openalex_id, patch});
-          const saveRes=await fetch(`${supabaseUrl}/rest/v1/openalex/works?openalex_id=eq.${paper.openalex_id}`,{
-            method:"PATCH",
-            headers:{apikey:supabaseKey,Authorization:`Bearer ${supabaseKey}`,"Content-Type":"application/json","Prefer":"return=representation"},
-            body:JSON.stringify(patch)
+          console.log("🔍 DB保存開始:", {openalex_id: paper.openalex_id, titleJa, abstractJa});
+          const saveRes=await fetch(`${supabaseUrl}/rest/v1/rpc/update_paper_translation`,{
+            method:"POST",
+            headers:{apikey:supabaseKey,Authorization:`Bearer ${supabaseKey}`,"Content-Type":"application/json"},
+            body:JSON.stringify({
+              p_openalex_id: paper.openalex_id,
+              p_title_ja: titleJa||null,
+              p_abstract_ja: abstractJa||null
+            })
           });
           const saveBody=await saveRes.text();
           console.log("📤 DB保存レスポンス:", {status: saveRes.status, body: saveBody});
 
           if(saveRes.ok){
-            const updated=JSON.parse(saveBody);
-            if(Array.isArray(updated)&&updated.length>0){
-              setErr("✅ AI解説をDBに保存しました ("+updated.length+"行更新)");
+            const updatedCount=parseInt(saveBody)||0;
+            if(updatedCount>0){
+              setErr("✅ AI解説をDBに保存しました");
             } else {
-              setErr("⚠️ 更新対象がありません。openalex_id を確認してください");
+              setErr("⚠️ 更新対象がありません");
               console.warn("更新されなかった。openalex_id:", paper.openalex_id);
             }
           } else {
