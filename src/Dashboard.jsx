@@ -478,7 +478,7 @@ useEffect(() => {
 
       {tab === "summaries" && <SummariesTab sbGet={sbGet} sbUpsert={sbUpsert} claudePost={claudePost} companies={companies} supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} c={c} card={card}/>}
       {tab === "manage"    && <ManageTab    supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} companies={companies} onRefresh={onClose} c={c} card={card}/>}
-      {tab === "keywords"  && <KeywordsTab  sbGet={sbGet} claudePost={claudePost} companies={companies} c={c} card={card}/>}
+      {tab === "keywords"  && <KeywordsTab  sbGet={sbGet} claudePost={claudePost} companies={companies} supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} c={c} card={card}/>}
       {tab === "tech"      && <TechPortfolio supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} c={c} card={card}/>}
 　　　　{tab === "research" && <ResearchIP supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} />}
       <style>{`input[type=date]::-webkit-calendar-picker-indicator{filter:invert(0.6);}::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:#1a3550;border-radius:3px;}`}</style>
@@ -2260,7 +2260,7 @@ function extractKeywordsSimple(texts, topN = 50) {
     .map(([keyword, count]) => ({ keyword, count }));
 }
 
-function KeywordsTab({ sbGet, claudePost, companies, c, card }) {
+function KeywordsTab({ sbGet, claudePost, companies, supabaseUrl, supabaseKey, c, card }) {
   const [dataSource,  setDataSource]  = useState("patent"); // patent | paper
   const [mode,        setMode]        = useState("overall"); // overall | company
   const [selCompany,  setSelCompany]  = useState(null);
@@ -2318,10 +2318,13 @@ function KeywordsTab({ sbGet, claudePost, companies, c, card }) {
           ? `author~like.*${selCompany.name.replace(/\*|%/g, "")}*&` : "";
         let offset = 0;
         while (true) {
-          const rows = await sbGet(
-            "openalex.papers?"+authorFilter+"select=id,title,abstract_text,author"
-            +"&limit="+PAGE+"&offset="+offset+"&order=publication_year.desc"
-          );
+          const papersUrl = "papers?"+authorFilter+"select=id,title,abstract_text,author"
+            +"&limit="+PAGE+"&offset="+offset+"&order=publication_year.desc";
+          const res = await fetch((supabaseUrl||"") + "/rest/v1/" + papersUrl, {
+            headers: { apikey: supabaseKey, Authorization: "Bearer "+supabaseKey, "Accept-Profile": "openalex" }
+          }).catch(() => null);
+          if (!res || !res.ok) break;
+          const rows = await res.json().catch(() => []);
           if (!rows || rows.length === 0) break;
           allData.push(...rows);
           if (rows.length < PAGE) break;
@@ -2333,9 +2336,12 @@ function KeywordsTab({ sbGet, claudePost, companies, c, card }) {
         let sOffset = 0;
         const idSet = new Set(allData.map(p => p.id));
         while (true) {
-          const rows = await sbGet(
-            "openalex.paper_summaries?select=paper_id,abstract_ja&limit="+PAGE+"&offset="+sOffset
-          ).catch(() => []);
+          const summariesUrl = "paper_summaries?select=paper_id,abstract_ja&limit="+PAGE+"&offset="+sOffset;
+          const res = await fetch((supabaseUrl||"") + "/rest/v1/" + summariesUrl, {
+            headers: { apikey: supabaseKey, Authorization: "Bearer "+supabaseKey, "Accept-Profile": "openalex" }
+          }).catch(() => null);
+          if (!res || !res.ok) break;
+          const rows = await res.json().catch(() => []);
           if (!rows || rows.length === 0) break;
           rows.filter(s => idSet.has(s.paper_id)).forEach(s => {
             summaryMap[s.paper_id] = s.abstract_ja;
