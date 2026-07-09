@@ -108,7 +108,7 @@ export default function PaperExplorer({ supabaseUrl, supabaseKey, claudeApiKey, 
           console.log("🔍 DB保存開始:", {openalex_id: paper.openalex_id, patch});
           const saveRes=await fetch(`${supabaseUrl}/rest/v1/works?openalex_id=eq.${paper.openalex_id}`,{
             method:"PATCH",
-            headers:{apikey:supabaseKey,Authorization:`Bearer ${supabaseKey}`,"Content-Type":"application/json","Prefer":"return=representation","Content-Profile":"openalex"},
+            headers:{apikey:supabaseKey,Authorization:`Bearer ${supabaseKey}`,"Content-Type":"application/json","Prefer":"return=representation","Accept-Profile":"openalex"},
             body:JSON.stringify(patch)
           });
           const saveBody=await saveRes.text();
