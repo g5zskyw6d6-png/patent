@@ -1812,24 +1812,70 @@ function SummariesTab({ sbGet, sbUpsert, claudePost, companies, supabaseUrl, sup
   const stopRef = useRef(false);
 
   const doGenerate = async () => {
-    if (!selCompany) return;
+    if (summaryKind === "patent" && !selCompany) return;
+    if (summaryKind === "paper" && !paperKeyword) return;
+
     setPhase("loading"); setErr(""); setResults({}); stopRef.current = false;
 
     try {
-      // ★ 特許の場合のみ
-      const url = "patents?company_id=eq."+selCompany.id+"&publication_date=gte."+dateFrom+"&publication_date=lte."+dateTo+"&select=patent_number,title_en,abstract_epo,country,inventors&limit=2000";
-      const allPatents = await sbGet(url);
-      if (!allPatents || allPatents.length === 0) { setErr("DBに該当する特許がありません。"); setPhase("idle"); return; }
+      let targets = [];
 
-      // 既に解説があるものを除外（オプション）
-      let targets = allPatents;
-      if (onlyNew) {
-        const existingNums = await sbGet("ai_summaries?patent_number=in.("+allPatents.map(p=>p.patent_number).join(",")+")&select=patent_number");
-        const existingSet  = new Set((existingNums||[]).map(r=>r.patent_number));
-        targets = allPatents.filter(p => !existingSet.has(p.patent_number));
+      if (summaryKind === "patent") {
+        // ★ 特許処理
+        const url = "patents?company_id=eq."+selCompany.id+"&publication_date=gte."+dateFrom+"&publication_date=lte."+dateTo+"&select=patent_number,title_en,abstract_epo,country,inventors&limit=2000";
+        const allPatents = await sbGet(url);
+        if (!allPatents || allPatents.length === 0) { setErr("DBに該当する特許がありません。"); setPhase("idle"); return; }
+
+        // 既に解説があるものを除外（オプション）
+        targets = allPatents;
+        if (onlyNew) {
+          const existingNums = await sbGet("ai_summaries?patent_number=in.("+allPatents.map(p=>p.patent_number).join(",")+")&select=patent_number");
+          const existingSet  = new Set((existingNums||[]).map(r=>r.patent_number));
+          targets = allPatents.filter(p => !existingSet.has(p.patent_number));
+        }
+
+        if (targets.length === 0) { setErr("すべての特許に解説が生成済みです。「未生成のみ」のチェックを外すと再生成できます。"); setPhase("idle"); return; }
+      } else {
+        // ★ 論文処理 — Vercel proxy API 経由で OpenAlex から取得
+        const response = await fetch("/api/openAlex/search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            keyword: paperKeyword,
+            sortBy: "cited_by_count",
+            limit: 100,
+            offset: 0,
+          }),
+        });
+
+        if (!response.ok) {
+          setErr("論文検索に失敗しました: "+response.status);
+          setPhase("idle");
+          return;
+        }
+
+        const data = await response.json();
+        if (!data.results || data.results.length === 0) {
+          setErr("検索条件に合致する論文が見つかりません。");
+          setPhase("idle");
+          return;
+        }
+
+        targets = data.results;
+
+        // 既に生成済みの論文を除外（オプション）
+        if (onlyNew) {
+          const existingIds = await sbGet("paper_summaries?openalex_id=in.("+targets.map(p=>p.openalex_id).join(",")+")&select=openalex_id");
+          const existingSet = new Set((existingIds||[]).map(r=>r.openalex_id));
+          targets = targets.filter(p => !existingSet.has(p.openalex_id));
+        }
+
+        if (targets.length === 0) {
+          setErr("すべての論文に解説が生成済みです。「未生成のみ」のチェックを外すと再生成できます。");
+          setPhase("idle");
+          return;
+        }
       }
-
-      if (targets.length === 0) { setErr("すべての特許に解説が生成済みです。「未生成のみ」のチェックを外すと再生成できます。"); setPhase("idle"); return; }
 
       setPhase("generating");
       setProgress({ done:0, total:targets.length });
@@ -1839,56 +1885,89 @@ function SummariesTab({ sbGet, sbUpsert, claudePost, companies, supabaseUrl, sup
       for (let i = 0; i < targets.length; i += BATCH) {
         if (stopRef.current) break;
         const batch = targets.slice(i, i + BATCH);
-        const list  = batch.map((p, idx) => {
-          let e = (idx+1)+". ["+p.patent_number+"] "+p.title_en;
-          if (p.abstract_epo) e += " / "+p.abstract_epo.slice(0, 100);
-          return e;
-        }).join("\n");
 
-        const text = await claudePost(
-          "You are a patent analyst. Analyze each patent below.\n\n" + "IMPORTANT: In NUM: field, use the EXACT patent number from [brackets], NOT the list number 1/2/3.\n\n" + "Reply ONLY (one line per patent):\n" + "NUM:<exact patent number from [brackets]>|Japanese title|4-5 sentence Japanese summary\n\n" + list
-          , 1500);
+        if (summaryKind === "patent") {
+          // ★ 特許の場合
+          const list  = batch.map((p, idx) => {
+            let e = (idx+1)+". ["+p.patent_number+"] "+p.title_en;
+            if (p.abstract_epo) e += " / "+p.abstract_epo.slice(0, 100);
+            return e;
+          }).join("\n");
 
-        const batchResults = {};
-        // ★ Claudeが返す番号を元の正確なIDにマッピング
-        const numMap = {};
-        batch.forEach(p => {
-          const idVal = summaryKind === "patent" ? p.patent_number : p.openalex_id;
-          numMap[idVal] = idVal;
-          // スペース除去・大文字化した版もマップ
-          numMap[idVal.replace(/\s/g,"").toUpperCase()] = idVal;
-        });
-        text.split("\n").forEach(line => {
-          if (!line.startsWith("NUM:")) return;
-          const body = line.slice(4), f = body.indexOf("|"), s = body.indexOf("|", f+1);
-          if (f < 0 || s < 0) return;
-          const rawNum  = body.slice(0,f).trim();
-          const jaTitle = body.slice(f+1,s).trim();
-          const summary = body.slice(s+1).trim();
-          // 元の番号に正規化（見つからなければskip）
-          const exactNum = numMap[rawNum]
-            || numMap[rawNum.replace(/\s/g,"").toUpperCase()]
-            || batch.find(p => p.patent_number.includes(rawNum) || rawNum.includes(p.patent_number))?.patent_number;
-          if (exactNum && summary) batchResults[exactNum] = { jaTitle, summary };
-          else if (!exactNum) console.warn("Patent number not matched:", rawNum);
-        });
+          const text = await claudePost(
+            "You are a patent analyst. Analyze each patent below.\n\n" + "IMPORTANT: In NUM: field, use the EXACT patent number from [brackets], NOT the list number 1/2/3.\n\n" + "Reply ONLY (one line per patent):\n" + "NUM:<exact patent number from [brackets]>|Japanese title|4-5 sentence Japanese summary\n\n" + list
+            , 1500);
 
-        // DBに保存
-        const rows = Object.entries(batchResults).map(([num, v]) => ({ patent_number:num, title_ja:v.jaTitle||null, summary_ja:v.summary, analyzed_at:new Date().toISOString() }));
-        if (rows.length > 0) await sbUpsert("ai_summaries", rows, "patent_number");
+          const batchResults = {};
+          const numMap = {};
+          batch.forEach(p => {
+            numMap[p.patent_number] = p.patent_number;
+            numMap[p.patent_number.replace(/\s/g,"").toUpperCase()] = p.patent_number;
+          });
+          text.split("\n").forEach(line => {
+            if (!line.startsWith("NUM:")) return;
+            const body = line.slice(4), f = body.indexOf("|"), s = body.indexOf("|", f+1);
+            if (f < 0 || s < 0) return;
+            const rawNum  = body.slice(0,f).trim();
+            const jaTitle = body.slice(f+1,s).trim();
+            const summary = body.slice(s+1).trim();
+            const exactNum = numMap[rawNum]
+              || numMap[rawNum.replace(/\s/g,"").toUpperCase()]
+              || batch.find(p => p.patent_number.includes(rawNum) || rawNum.includes(p.patent_number))?.patent_number;
+            if (exactNum && summary) batchResults[exactNum] = { jaTitle, summary };
+          });
 
-        // 日本語タイトルを patents テーブルにも反映
-        for (const [num, v] of Object.entries(batchResults)) {
-          if (v.jaTitle) {
-            fetch(supabaseUrl+"/rest/v1/patents?patent_number=eq."+encodeURIComponent(num), {
-              method:"PATCH",
-              headers:{"apikey":supabaseKey,"Authorization":"Bearer "+supabaseKey,"Content-Type":"application/json","Prefer":"return=minimal"},
-              body:JSON.stringify({title_ja:v.jaTitle})
-            }).catch(e => console.warn("title_ja patch failed:", num, e));
+          const rows = Object.entries(batchResults).map(([num, v]) => ({ patent_number:num, title_ja:v.jaTitle||null, summary_ja:v.summary, analyzed_at:new Date().toISOString() }));
+          if (rows.length > 0) await sbUpsert("ai_summaries", rows, "patent_number");
+
+          for (const [num, v] of Object.entries(batchResults)) {
+            if (v.jaTitle) {
+              fetch(supabaseUrl+"/rest/v1/patents?patent_number=eq."+encodeURIComponent(num), {
+                method:"PATCH",
+                headers:{"apikey":supabaseKey,"Authorization":"Bearer "+supabaseKey,"Content-Type":"application/json","Prefer":"return=minimal"},
+                body:JSON.stringify({title_ja:v.jaTitle})
+              }).catch(e => console.warn("title_ja patch failed:", num, e));
+            }
           }
+
+          allResults = { ...allResults, ...batchResults };
+        } else {
+          // ★ 論文の場合
+          const list = batch.map((p, idx) => {
+            let e = (idx+1)+". ["+p.openalex_id+"] "+p.title;
+            if (p.abstract_text) e += " / "+p.abstract_text.slice(0, 100);
+            return e;
+          }).join("\n");
+
+          const text = await claudePost(
+            "You are an academic paper analyst. Analyze each paper below in Japanese.\n\n" + "IMPORTANT: In NUM: field, use the EXACT OpenAlex ID from [brackets], NOT the list number 1/2/3.\n\n" + "Reply ONLY (one line per paper):\n" + "NUM:<exact openalex_id from [brackets]>|Japanese title|4-5 sentence Japanese summary\n\n" + list
+            , 1500);
+
+          const batchResults = {};
+          const idMap = {};
+          batch.forEach(p => {
+            idMap[p.openalex_id] = p.openalex_id;
+            idMap[p.openalex_id.replace(/\s/g,"").toUpperCase()] = p.openalex_id;
+          });
+          text.split("\n").forEach(line => {
+            if (!line.startsWith("NUM:")) return;
+            const body = line.slice(4), f = body.indexOf("|"), s = body.indexOf("|", f+1);
+            if (f < 0 || s < 0) return;
+            const rawId   = body.slice(0,f).trim();
+            const jaTitle = body.slice(f+1,s).trim();
+            const summary = body.slice(s+1).trim();
+            const exactId = idMap[rawId]
+              || idMap[rawId.replace(/\s/g,"").toUpperCase()]
+              || batch.find(p => p.openalex_id.includes(rawId) || rawId.includes(p.openalex_id))?.openalex_id;
+            if (exactId && summary) batchResults[exactId] = { jaTitle, summary };
+          });
+
+          const rows = Object.entries(batchResults).map(([id, v]) => ({ openalex_id:id, title_ja:v.jaTitle||null, abstract_ja:v.summary, updated_at:new Date().toISOString() }));
+          if (rows.length > 0) await sbUpsert("paper_summaries", rows, "openalex_id");
+
+          allResults = { ...allResults, ...batchResults };
         }
 
-        allResults = { ...allResults, ...batchResults };
         setResults({ ...allResults });
         setProgress({ done:Math.min(i+BATCH, targets.length), total:targets.length });
         if (i + BATCH < targets.length) await new Promise(r => setTimeout(r, 1500));
@@ -1910,8 +1989,17 @@ function SummariesTab({ sbGet, sbUpsert, claudePost, companies, supabaseUrl, sup
     <div style={{flex:1,overflowY:"auto",padding:16}}>
       {/* コントロール */}
       <div style={{...card,marginBottom:16}}>
-        <div style={{fontSize:12,fontWeight:700,color:c.purple,marginBottom:4}}>AI解説生成（特許）</div>
-        <div style={{fontSize:10,color:c.muted,marginBottom:12}}>論文の AI 解説は 🔬研究→IP転換 タブの PaperExplorer をご利用ください</div>
+        <div style={{fontSize:12,fontWeight:700,color:c.purple,marginBottom:4}}>✨ AI解説生成</div>
+        <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:12}}>
+          <label style={{display:"flex",alignItems:"center",gap:6,fontSize:11,cursor:"pointer"}}>
+            <input type="radio" name="summaryKind" value="patent" checked={summaryKind==="patent"} onChange={()=>{setSummaryKind("patent");setSelCompany(null);}}/>
+            <span style={{color:c.text}}>特許</span>
+          </label>
+          <label style={{display:"flex",alignItems:"center",gap:6,fontSize:11,cursor:"pointer"}}>
+            <input type="radio" name="summaryKind" value="paper" checked={summaryKind==="paper"} onChange={()=>{setSummaryKind("paper");setPaperKeyword("");}}/>
+            <span style={{color:c.text}}>論文</span>
+          </label>
+        </div>
         <div style={{display:"flex",flexWrap:"wrap",gap:8,alignItems:"center",marginBottom:12}}>
           {summaryKind === "patent" && (
             <select value={selCompany?.id||""} onChange={e => setSelCompany(companies.find(c=>c.id===e.target.value)||null)}
@@ -1932,9 +2020,9 @@ function SummariesTab({ sbGet, sbUpsert, claudePost, companies, supabaseUrl, sup
           </label>
         </div>
         <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-          <button onClick={doGenerate} disabled={!selCompany||phase==="loading"||phase==="generating"}
-            style={{padding:"8px 20px",borderRadius:7,border:"none",background:!selCompany||phase==="loading"||phase==="generating"?"#1a3550":c.purple,color:!selCompany||phase==="loading"||phase==="generating"?c.muted:"#fff",fontWeight:700,fontSize:13,cursor:"pointer"}}>
-            {phase==="loading"?"特許取得中...":phase==="generating"?"生成中 "+progress.done+"/"+progress.total+"件":"✨ AI解説を生成"}
+          <button onClick={doGenerate} disabled={(summaryKind==="patent"&&!selCompany)||(summaryKind==="paper"&&!paperKeyword)||phase==="loading"||phase==="generating"}
+            style={{padding:"8px 20px",borderRadius:7,border:"none",background:(summaryKind==="patent"&&!selCompany)||(summaryKind==="paper"&&!paperKeyword)||phase==="loading"||phase==="generating"?"#1a3550":c.purple,color:(summaryKind==="patent"&&!selCompany)||(summaryKind==="paper"&&!paperKeyword)||phase==="loading"||phase==="generating"?c.muted:"#fff",fontWeight:700,fontSize:13,cursor:"pointer"}}>
+            {phase==="loading"?(summaryKind==="patent"?"特許取得中...":"論文取得中..."):phase==="generating"?"生成中 "+progress.done+"/"+progress.total+"件":"✨ AI解説を生成"}
           </button>
           {(phase==="loading"||phase==="generating") && (
             <button onClick={() => stopRef.current=true} style={{padding:"8px 12px",borderRadius:6,border:"1px solid "+c.border,background:"transparent",color:c.amber,fontSize:12,cursor:"pointer"}}>⏹ 停止</button>
@@ -2224,8 +2312,8 @@ function KeywordsTab({ sbGet, claudePost, companies, supabaseUrl, supabaseKey, c
       let allData = [];
       let summaryMap = {};
 
-      // ★ 特許モード：既存ロジック
-      {
+      if (dataSource === "patent") {
+        // ★ 特許モード
         const baseFilter = mode === "company" && selCompany
           ? "company_id=eq."+selCompany.id+"&" : "";
         let offset = 0;
@@ -2256,10 +2344,40 @@ function KeywordsTab({ sbGet, claudePost, companies, supabaseUrl, supabaseKey, c
           sOffset += PAGE;
           await new Promise(r => setTimeout(r, 200));
         }
+      } else {
+        // ★ 論文モード — Supabase papers_search から全件取得
+        let offset = 0;
+        while (true) {
+          const rows = await sbGet(
+            "papers_search?select=openalex_id,title,abstract_text"
+            +"&limit="+PAGE+"&offset="+offset
+          ).catch(() => []);
+          if (!rows || rows.length === 0) break;
+          allData.push(...rows);
+          if (rows.length < PAGE) break;
+          offset += PAGE;
+          await new Promise(r => setTimeout(r, 200));
+        }
+
+        // paper_summaries から日本語要約を取得
+        let sOffset = 0;
+        while (true) {
+          const rows = await sbGet(
+            "paper_summaries?select=openalex_id,abstract_ja&limit="+PAGE+"&offset="+sOffset
+          ).catch(() => []);
+          if (!rows || rows.length === 0) break;
+          const idSet = new Set(allData.map(p => p.openalex_id));
+          rows.filter(s => idSet.has(s.openalex_id)).forEach(s => {
+            summaryMap[s.openalex_id] = s.abstract_ja;
+          });
+          if (rows.length < PAGE) break;
+          sOffset += PAGE;
+          await new Promise(r => setTimeout(r, 200));
+        }
       }
 
       if (!allData || allData.length === 0) {
-        setErr("特許データがありません。");
+        setErr(dataSource === "patent" ? "特許データがありません。" : "論文データがありません。");
         setPhase("idle"); return;
       }
       setTotalPatents(allData.length);
@@ -2267,13 +2385,22 @@ function KeywordsTab({ sbGet, claudePost, companies, supabaseUrl, supabaseKey, c
       if (method === "simple") {
         // 単純頻度集計
         const texts = allData.flatMap(item => {
-          return [
-            item.title_en || "",
-            item.abstract_epo || "",
-            summaryMap[item.patent_number] || "",
-            item.claims_independent || "",
-            item.description_text || "",
-          ];
+          const keyId = dataSource === "patent" ? item.patent_number : item.openalex_id;
+          if (dataSource === "patent") {
+            return [
+              item.title_en || "",
+              item.abstract_epo || "",
+              summaryMap[keyId] || "",
+              item.claims_independent || "",
+              item.description_text || "",
+            ];
+          } else {
+            return [
+              item.title || "",
+              item.abstract_text || "",
+              summaryMap[keyId] || "",
+            ];
+          }
         });
         const result = extractKeywordsSimple(texts, 50);
         setKeywords(result);
@@ -2289,30 +2416,57 @@ function KeywordsTab({ sbGet, claudePost, companies, supabaseUrl, supabaseKey, c
         for (let i = 0; i < allData.length; i += BATCH) {
           setAiProgress({ done: Math.floor(i/BATCH), total: totalBatches });
           const batch = allData.slice(i, i + BATCH);
-          const textBlock = batch.map((item, idx) => {
-            const p = item;
-            const summary = summaryMap[p.patent_number] || "";
-            return (idx+1)+". "+p.title_en
-              +(p.abstract_epo        ? " / "+p.abstract_epo.slice(0,100)        : "")
-              +(summary               ? " / "+summary.slice(0,80)                : "")
-              +(p.claims_independent  ? " / Claims: "+p.claims_independent.slice(0,100) : "")
-              +(p.description_text    ? " / Desc: "+p.description_text.slice(0,100)     : "");
-          }).join("\n");
 
-          const text = await claudePost(
-            "Extract the top 20 technology keywords from these patents. Focus on specific technical terms, not generic words.\n\n"
-            +"Reply ONLY in this format (one per line):\nKEYWORD:term|count_estimate\n\n"
-            +"Patents:\n" + textBlock, 800
-          );
+          if (dataSource === "patent") {
+            const textBlock = batch.map((item, idx) => {
+              const p = item;
+              const summary = summaryMap[p.patent_number] || "";
+              return (idx+1)+". "+p.title_en
+                +(p.abstract_epo        ? " / "+p.abstract_epo.slice(0,100)        : "")
+                +(summary               ? " / "+summary.slice(0,80)                : "")
+                +(p.claims_independent  ? " / Claims: "+p.claims_independent.slice(0,100) : "")
+                +(p.description_text    ? " / Desc: "+p.description_text.slice(0,100)     : "");
+            }).join("\n");
 
-          text.split("\n").forEach(line => {
-            if (!line.startsWith("KEYWORD:")) return;
-            const body = line.slice(8);
-            const sep  = body.lastIndexOf("|");
-            const kw   = sep > 0 ? body.slice(0, sep).trim().toLowerCase() : body.trim().toLowerCase();
-            const cnt  = sep > 0 ? parseInt(body.slice(sep+1)) || 1 : 1;
-            if (kw && kw.length > 2) allKeywords[kw] = (allKeywords[kw] || 0) + cnt;
-          });
+            const text = await claudePost(
+              "Extract the top 20 technology keywords from these patents. Focus on specific technical terms, not generic words.\n\n"
+              +"Reply ONLY in this format (one per line):\nKEYWORD:term|count_estimate\n\n"
+              +"Patents:\n" + textBlock, 800
+            );
+
+            text.split("\n").forEach(line => {
+              if (!line.startsWith("KEYWORD:")) return;
+              const body = line.slice(8);
+              const sep  = body.lastIndexOf("|");
+              const kw   = sep > 0 ? body.slice(0, sep).trim().toLowerCase() : body.trim().toLowerCase();
+              const cnt  = sep > 0 ? parseInt(body.slice(sep+1)) || 1 : 1;
+              if (kw && kw.length > 2) allKeywords[kw] = (allKeywords[kw] || 0) + cnt;
+            });
+          } else {
+            // 論文モード
+            const textBlock = batch.map((item, idx) => {
+              const p = item;
+              const summary = summaryMap[p.openalex_id] || "";
+              return (idx+1)+". "+p.title
+                +(p.abstract_text    ? " / "+p.abstract_text.slice(0,100)    : "")
+                +(summary            ? " / "+summary.slice(0,80)            : "");
+            }).join("\n");
+
+            const text = await claudePost(
+              "Extract the top 20 research keywords from these academic papers. Focus on specific technical terms, methodologies, and concepts, not generic words.\n\n"
+              +"Reply ONLY in this format (one per line):\nKEYWORD:term|count_estimate\n\n"
+              +"Papers:\n" + textBlock, 800
+            );
+
+            text.split("\n").forEach(line => {
+              if (!line.startsWith("KEYWORD:")) return;
+              const body = line.slice(8);
+              const sep  = body.lastIndexOf("|");
+              const kw   = sep > 0 ? body.slice(0, sep).trim().toLowerCase() : body.trim().toLowerCase();
+              const cnt  = sep > 0 ? parseInt(body.slice(sep+1)) || 1 : 1;
+              if (kw && kw.length > 2) allKeywords[kw] = (allKeywords[kw] || 0) + cnt;
+            });
+          }
 
           if (i + BATCH < allData.length) await new Promise(r => setTimeout(r, 600));
         }
@@ -2338,20 +2492,33 @@ function KeywordsTab({ sbGet, claudePost, companies, supabaseUrl, supabaseKey, c
 
       {/* コントロール */}
       <div style={{...card,marginBottom:16}}>
-        <div style={{fontSize:12,fontWeight:700,color:"#e879f9",marginBottom:4}}>🏷️ 技術キーワードランキング（特許）</div>
-        <div style={{fontSize:10,color:c.muted,marginBottom:12}}>論文の分析は 🔬研究→IP転換 タブの PaperExplorer をご利用ください</div>
+        <div style={{fontSize:12,fontWeight:700,color:"#e879f9",marginBottom:4}}>🏷️ 技術キーワードランキング</div>
 
-        {/* モード切替 */}
-        <div style={{display:"flex",gap:6,marginBottom:12}}>
-          <button onClick={()=>setMode("overall")}
-            style={{padding:"5px 16px",borderRadius:6,border:"1px solid "+(mode==="overall"?"#e879f9":c.border),background:mode==="overall"?"#1a0a2a":"transparent",color:mode==="overall"?"#e879f9":c.muted,fontSize:12,cursor:"pointer",fontWeight:mode==="overall"?700:400}}>
-            🌐 全体ランキング
-          </button>
-          <button onClick={()=>setMode("company")}
-            style={{padding:"5px 16px",borderRadius:6,border:"1px solid "+(mode==="company"?"#e879f9":c.border),background:mode==="company"?"#1a0a2a":"transparent",color:mode==="company"?"#e879f9":c.muted,fontSize:12,cursor:"pointer",fontWeight:mode==="company"?700:400}}>
-            🏢 企業別ランキング
-          </button>
+        {/* データソース切替（特許 / 論文） */}
+        <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:12}}>
+          <label style={{display:"flex",alignItems:"center",gap:6,fontSize:11,cursor:"pointer"}}>
+            <input type="radio" name="dataSource" value="patent" checked={dataSource==="patent"} onChange={()=>{setDataSource("patent");setMode("overall");setSelCompany(null);}}/>
+            <span style={{color:c.text}}>特許</span>
+          </label>
+          <label style={{display:"flex",alignItems:"center",gap:6,fontSize:11,cursor:"pointer"}}>
+            <input type="radio" name="dataSource" value="paper" checked={dataSource==="paper"} onChange={()=>{setDataSource("paper");setMode("overall");}}/>
+            <span style={{color:c.text}}>論文</span>
+          </label>
         </div>
+
+        {/* モード切替（全体 / 企業別） — 特許のみ */}
+        {dataSource === "patent" && (
+          <div style={{display:"flex",gap:6,marginBottom:12}}>
+            <button onClick={()=>setMode("overall")}
+              style={{padding:"5px 16px",borderRadius:6,border:"1px solid "+(mode==="overall"?"#e879f9":c.border),background:mode==="overall"?"#1a0a2a":"transparent",color:mode==="overall"?"#e879f9":c.muted,fontSize:12,cursor:"pointer",fontWeight:mode==="overall"?700:400}}>
+              🌐 全体ランキング
+            </button>
+            <button onClick={()=>setMode("company")}
+              style={{padding:"5px 16px",borderRadius:6,border:"1px solid "+(mode==="company"?"#e879f9":c.border),background:mode==="company"?"#1a0a2a":"transparent",color:mode==="company"?"#e879f9":c.muted,fontSize:12,cursor:"pointer",fontWeight:mode==="company"?700:400}}>
+              🏢 企業別ランキング
+            </button>
+          </div>
+        )}
 
         {/* 企業選択 */}
         {mode === "company" && (
@@ -2411,7 +2578,7 @@ function KeywordsTab({ sbGet, claudePost, companies, supabaseUrl, supabaseKey, c
       {keywords.length > 0 && phase === "done" && (
         <>
           <div style={{fontSize:11,color:c.muted,marginBottom:10}}>
-            特許 / {mode==="overall"?"全体":"「"+(selCompany?.name||"")+"」"} / {totalPatents}件から抽出 / 抽出方法: {method==="simple"?"単純頻度集計":"Claude AI"} / TOP{keywords.length}
+            {dataSource==="patent"?"特許":"論文"} / {dataSource==="patent"&&mode==="overall"?"全体":dataSource==="patent"&&mode==="company"?"「"+(selCompany?.name||"")+"」":"全体"} / {totalPatents}件から抽出 / 抽出方法: {method==="simple"?"単純頻度集計":"Claude AI"} / TOP{keywords.length}
           </div>
           <div style={{display:"flex",justifyContent:"flex-end",marginBottom:8}}>
             <button
