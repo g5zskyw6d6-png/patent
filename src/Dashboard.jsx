@@ -1959,11 +1959,11 @@ function SummariesTab({ sbGet, sbUpsert, claudePost, companies, supabaseUrl, sup
         <div style={{fontSize:12,fontWeight:700,color:c.purple,marginBottom:12}}>AI解説生成（DBデータを使用）</div>
         {/* 特許・論文タブ */}
         <div style={{display:"flex",gap:4,marginBottom:14}}>
-          <button onClick={() => {setSummaryKind("patent"); setResults({};}}
+          <button onClick={() => {setSummaryKind("patent"); setResults({});}}
             style={{flex:1,padding:"8px 12px",borderRadius:6,border:"1px solid "+(summaryKind==="patent"?c.purple:c.border),background:summaryKind==="patent"?"#0d0820":"transparent",color:summaryKind==="patent"?c.purple:c.muted,fontSize:12,fontWeight:700,cursor:"pointer"}}>
             📋 特許
           </button>
-          <button onClick={() => {setSummaryKind("paper"); setResults({};}}
+          <button onClick={() => {setSummaryKind("paper"); setResults({});}}
             style={{flex:1,padding:"8px 12px",borderRadius:6,border:"1px solid "+(summaryKind==="paper"?"#34d399":c.border),background:summaryKind==="paper"?"#052e2b":"transparent",color:summaryKind==="paper"?"#34d399":c.muted,fontSize:12,fontWeight:700,cursor:"pointer"}}>
             📄 論文
           </button>
