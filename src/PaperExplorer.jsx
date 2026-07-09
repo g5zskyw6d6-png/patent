@@ -73,7 +73,7 @@ export default function PaperExplorer({ supabaseUrl, supabaseKey, claudeApiKey, 
 
   // ---- AI解説(タイトル日本語訳 + Abstract日本語訳) ----
   const doAiExplain = async(paper)=>{
-    setAiPhase("loading");setAiResult(null);
+    setAiPhase("loading");setAiResult(null);setErr("");
     try{
       const text=await claudePost(
         `あなたは学術論文の翻訳者です。以下の英語論文のタイトルと要約を正確に日本語に翻訳してください。\n\n`
@@ -96,16 +96,31 @@ export default function PaperExplorer({ supabaseUrl, supabaseKey, claudeApiKey, 
       setAiResult({titleJa, abstractJa});
       setAiPhase("done");
 
-      // DB保存
+      // ローカル結果も更新（先に更新してUIに反映）
+      if(titleJa||abstractJa){
+        setResults(prev=>prev.map(r=>r.openalex_id===paper.openalex_id?{...r,title_ja:titleJa||r.title_ja,abstract_ja:abstractJa||r.abstract_ja}:r));
+      }
+
+      // DB保存（非同期で実行、結果はユーザーに通知）
       if(titleJa||abstractJa){
         const patch={}; if(titleJa) patch.title_ja=titleJa; if(abstractJa) patch.abstract_ja=abstractJa;
-        fetch(`${supabaseUrl}/rest/v1/works?openalex_id=eq.${paper.openalex_id}`,{
-          method:"PATCH",
-          headers:{apikey:supabaseKey,Authorization:`Bearer ${supabaseKey}`,"Content-Type":"application/json",Prefer:"return=minimal","Content-Profile":"openalex"},
-          body:JSON.stringify(patch)
-        }).catch(e=>console.warn("DB保存失敗:",e));
-        // ローカル結果も更新
-        setResults(prev=>prev.map(r=>r.openalex_id===paper.openalex_id?{...r,title_ja:titleJa||r.title_ja,abstract_ja:abstractJa||r.abstract_ja}:r));
+        try{
+          const saveRes=await fetch(`${supabaseUrl}/rest/v1/works?openalex_id=eq.${paper.openalex_id}`,{
+            method:"PATCH",
+            headers:{apikey:supabaseKey,Authorization:`Bearer ${supabaseKey}`,"Content-Type":"application/json",Prefer:"return=minimal","Content-Profile":"openalex"},
+            body:JSON.stringify(patch)
+          });
+          if(saveRes.ok){
+            setErr("✅ AI解説をDBに保存しました");
+          } else {
+            const errText=await saveRes.text().catch(()=>"");
+            setErr("⚠️ DB保存失敗 ("+saveRes.status+"): "+errText.slice(0,100));
+            console.error("DB保存失敗:", saveRes.status, errText);
+          }
+        }catch(saveErr){
+          setErr("⚠️ DB保存エラー: "+saveErr.message);
+          console.error("DB保存エラー:", saveErr);
+        }
       }
     }catch(e){setErr("AI解説エラー: "+e.message);setAiPhase("idle");}
   };
