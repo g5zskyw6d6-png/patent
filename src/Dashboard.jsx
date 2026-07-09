@@ -445,8 +445,6 @@ useEffect(() => {
     { id:"search",   label:"🔍 検索・閲覧" },
     { id:"analyze",  label:"🤖 AI分析" },
     { id:"summaries",label:"✨ AI解説生成" },
-    { id:"compare",  label:"📊 企業比較" },
-    { id:"overview", label:"🌐 全体概要" },
     { id:"manage",   label:"⚙️ 企業管理" },
     { id:"keywords",  label:"🏷️ キーワード" },
     { id:"tech",     label:"🧭 技術ポートフォリオ" },
@@ -479,8 +477,6 @@ useEffect(() => {
       {tab === "analyze"   && <AnalyzeTab   sbGet={sbGet} supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} companies={companies} c={c} card={card}/>}
 
       {tab === "summaries" && <SummariesTab sbGet={sbGet} sbUpsert={sbUpsert} claudePost={claudePost} companies={companies} supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} c={c} card={card}/>}
-      {tab === "compare"   && <CompareTab   sbGet={sbGet} companies={companies} c={c} card={card}/>}
-      {tab === "overview"  && <OverviewTab  sbGet={sbGet} c={c} card={card}/>}
       {tab === "manage"    && <ManageTab    supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} companies={companies} onRefresh={onClose} c={c} card={card}/>}
       {tab === "keywords"  && <KeywordsTab  sbGet={sbGet} claudePost={claudePost} companies={companies} c={c} card={card}/>}
       {tab === "tech"      && <TechPortfolio supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} c={c} card={card}/>}
@@ -1460,6 +1456,7 @@ function AnalyzeTab({ sbGet, supabaseUrl, supabaseKey, companies, c, card }) {
   const [loading,     setLoading]     = useState(false);
   const [err,         setErr]         = useState("");
   const [showList,    setShowList]    = useState(true);
+  const [listTab,     setListTab]     = useState("patent");  // 左パネルの表示タブ
 
   useEffect(() => { loadAllAnalyses(); loadAllPaperAnalyses(); }, []);
 
@@ -1542,9 +1539,19 @@ function AnalyzeTab({ sbGet, supabaseUrl, supabaseKey, companies, c, card }) {
 
       {/* 左：一覧パネル(幅220: 検索・閲覧と統一) */}
       <div style={{width:220,borderRight:"1px solid "+c.border,background:c.bg1,display:"flex",flexDirection:"column",flexShrink:0}}>
-        <div style={{padding:"12px 14px 8px",borderBottom:"1px solid "+c.border}}>
-          <div style={{fontSize:12,fontWeight:700,color:c.purple,marginBottom:4}}>📋 DB保存済みの分析一覧</div>
-          <div style={{fontSize:11,color:c.muted}}>{totalCount}件</div>
+        <div style={{padding:"10px 10px 8px",borderBottom:"1px solid "+c.border}}>
+          <div style={{fontSize:11,fontWeight:700,color:c.purple,marginBottom:8}}>📋 分析一覧</div>
+          <div style={{display:"flex",gap:4,marginBottom:6}}>
+            <button onClick={() => setListTab("patent")}
+              style={{flex:1,padding:"6px 8px",borderRadius:5,border:"1px solid "+(listTab==="patent"?c.cyan:c.border),background:listTab==="patent"?"#0c2d42":"transparent",color:listTab==="patent"?c.cyan:c.muted,fontSize:11,fontWeight:700,cursor:"pointer"}}>
+              📋 特許
+            </button>
+            <button onClick={() => setListTab("paper")}
+              style={{flex:1,padding:"6px 8px",borderRadius:5,border:"1px solid "+(listTab==="paper"?"#34d399":c.border),background:listTab==="paper"?"#052e2b":"transparent",color:listTab==="paper"?"#34d399":c.muted,fontSize:11,fontWeight:700,cursor:"pointer"}}>
+              📄 論文
+            </button>
+          </div>
+          <div style={{fontSize:10,color:c.muted}}>{listTab==="patent" ? allAnalyses.length : allPaperAnalyses.length}件</div>
         </div>
         <div style={{flex:1,overflowY:"auto",padding:"8px"}}>
           {totalCount === 0 && (
@@ -1553,12 +1560,18 @@ function AnalyzeTab({ sbGet, supabaseUrl, supabaseKey, companies, c, card }) {
               <div style={{fontSize:12,lineHeight:1.8}}>まだ分析データがありません。<br/>「検索・閲覧」タブの<br/>「AI分析」から<br/>分析を実施してください。</div>
             </div>
           )}
+          {totalCount > 0 && ((listTab === "patent" && allAnalyses.length === 0) || (listTab === "paper" && allPaperAnalyses.length === 0)) && (
+            <div style={{textAlign:"center",paddingTop:40,color:c.muted}}>
+              <div style={{fontSize:20,marginBottom:8}}>{listTab === "patent" ? "📋" : "📄"}</div>
+              <div style={{fontSize:12,lineHeight:1.8}}>{listTab === "patent" ? "特許分析データなし" : "論文分析データなし"}<br/><span style={{fontSize:10}}>別のタブを確認してください</span></div>
+            </div>
+          )}
 
           {/* 特許分析 */}
-          {allAnalyses.length > 0 && (
-            <div style={{fontSize:10,fontWeight:700,color:c.cyan,margin:"4px 4px 6px",letterSpacing:".05em"}}>📋 特許分析</div>
+          {listTab === "patent" && allAnalyses.length > 0 && (
+            <div style={{fontSize:10,fontWeight:700,color:c.cyan,margin:"4px 4px 6px",letterSpacing:".05em"}}>特許分析結果</div>
           )}
-          {allAnalyses.map((row, i) => {
+          {listTab === "patent" && allAnalyses.map((row, i) => {
             const rowCo   = companies.find(c => c.id === row.company_id);
             const isActive = selKind==="patent" && selRow?.company_id === row.company_id && selRow?.date_from === row.date_from && selRow?.date_to === row.date_to;
             return (
@@ -1603,10 +1616,10 @@ function AnalyzeTab({ sbGet, supabaseUrl, supabaseKey, companies, c, card }) {
           })}
 
           {/* 論文分析 */}
-          {allPaperAnalyses.length > 0 && (
-            <div style={{fontSize:10,fontWeight:700,color:"#34d399",margin:"12px 4px 6px",letterSpacing:".05em"}}>📄 論文分析</div>
+          {listTab === "paper" && allPaperAnalyses.length > 0 && (
+            <div style={{fontSize:10,fontWeight:700,color:"#34d399",margin:"4px 4px 6px",letterSpacing:".05em"}}>論文分析結果</div>
           )}
-          {allPaperAnalyses.map((row, i) => {
+          {listTab === "paper" && allPaperAnalyses.map((row, i) => {
             const isActive = selKind==="paper" && selRow?.id === row.id;
             return (
               <div key={"pap"+i}
@@ -1927,183 +1940,6 @@ function SummariesTab({ sbGet, sbUpsert, claudePost, companies, supabaseUrl, sup
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   📊 企業比較タブ
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-function CompareTab({ sbGet, companies, c, card }) {
-  const [cmpIds,    setCmpIds]    = useState([]);
-  const [cmpData,   setCmpData]   = useState([]);
-  const [loading,   setLoading]   = useState(false);
-  const [err,       setErr]       = useState("");
-
-  const toggle = id => setCmpIds(prev => prev.includes(id) ? prev.filter(x=>x!==id) : prev.length < 3 ? [...prev,id] : prev);
-
-  const doCompare = async () => {
-    if (cmpIds.length < 2) return;
-    setLoading(true); setErr("");
-    try {
-      const data = await sbGet("portfolio_analyses?company_id=in.("+cmpIds.join(",")+")"+"&order=analyzed_at.desc&select=*");
-      const byCompany = {};
-      (data||[]).forEach(r => { if (!byCompany[r.company_id]) byCompany[r.company_id] = r; });
-      setCmpData(Object.values(byCompany));
-      if (Object.values(byCompany).length === 0) setErr("比較データがありません。先に「AI分析」タブでポートフォリオ分析を実行してください。");
-    } catch(e) { setErr("エラー: "+e.message); }
-    setLoading(false);
-  };
-
-  const HBar = ({ categories, color }) => (
-    <div>{(categories||[]).slice(0,5).map((cat,i)=>(
-      <div key={i} style={{marginBottom:8}}>
-        <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}><span style={{fontSize:11,color:c.text}}>{cat.name}</span><span style={{fontSize:11,color,fontWeight:700}}>{cat.pct}%</span></div>
-        <div style={{height:5,background:c.bg2,borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",width:cat.pct+"%",background:color,borderRadius:3}}/></div>
-      </div>
-    ))}</div>
-  );
-
-  return (
-    <div style={{display:"flex",flex:1,overflow:"hidden"}}>
-      <div style={{width:220,borderRight:"1px solid "+c.border,background:c.bg1,overflowY:"auto",padding:12,flexShrink:0}}>
-        <div style={{fontSize:11,fontWeight:700,color:c.muted,marginBottom:4}}>比較する企業（最大3社）</div>
-        <div style={{fontSize:10,color:c.muted,marginBottom:10}}>「AI分析」タブで分析済みの企業のみ有効</div>
-        {companies.map(co => (
-          <div key={co.id} onClick={() => toggle(co.id)}
-            style={{display:"flex",alignItems:"center",gap:6,padding:"5px 6px",borderRadius:5,marginBottom:1,cursor:"pointer",background:cmpIds.includes(co.id)?"#0c2d42":"transparent",border:"1px solid "+(cmpIds.includes(co.id)?c.cyan:"transparent"),opacity:cmpIds.length>=3&&!cmpIds.includes(co.id)?.4:1}}>
-            <span style={{fontSize:12}}>{co.flag}</span>
-            <span style={{fontSize:11,color:cmpIds.includes(co.id)?c.cyan:c.text}}>{co.name}</span>
-            {cmpIds.includes(co.id)&&<span style={{marginLeft:"auto",fontSize:10,color:c.cyan}}>✓</span>}
-          </div>
-        ))}
-        <button onClick={doCompare} disabled={cmpIds.length<2||loading}
-          style={{width:"100%",padding:"8px",borderRadius:7,border:"none",background:cmpIds.length<2?"#1a3550":c.cyan,color:cmpIds.length<2?c.muted:"#000",fontWeight:700,fontSize:12,cursor:"pointer",marginTop:10}}>
-          {loading?"取得中...":"比較する"}
-        </button>
-      </div>
-      <div style={{flex:1,overflowY:"auto",padding:16}}>
-        {err && <div style={{padding:"6px 12px",background:"#1a1000",borderRadius:6,fontSize:11,color:c.amber,marginBottom:12}}>{err}</div>}
-        {cmpData.length === 0 && !loading && (
-          <div style={{textAlign:"center",paddingTop:60,color:c.muted}}><div style={{fontSize:24,marginBottom:10}}>📊</div><div>左から2〜3社を選択して「比較する」を押してください</div></div>
-        )}
-        {cmpData.length > 0 && (
-          <>
-            <div style={{display:"grid",gridTemplateColumns:"repeat("+cmpData.length+",1fr)",gap:12,marginBottom:14}}>
-              {cmpData.map((d,i) => {
-                const cats = typeof d.categories==="string" ? JSON.parse(d.categories) : (d.categories||[]);
-                const clr  = CAT_COLORS[i*2];
-                return (<div key={d.company_id} style={card}>
-                  <div style={{fontSize:14,fontWeight:700,color:clr,marginBottom:4}}>{d.company_name}</div>
-                  <div style={{fontSize:11,color:c.muted,marginBottom:10}}>{d.date_from} 〜 {d.date_to}</div>
-                  <div style={{fontSize:11,color:c.muted,marginBottom:6}}>技術カテゴリー分類</div>
-                  <HBar categories={cats} color={clr}/>
-                  {d.strategic && <div style={{marginTop:10}}><div style={{fontSize:11,color:c.muted,marginBottom:4}}>戦略的示唆</div><div style={{fontSize:11,color:c.text,lineHeight:1.6,padding:"6px 10px",background:c.bg2,borderRadius:5,borderLeft:"2px solid "+clr}}>{d.strategic}</div></div>}
-                  {d.top_patent && <div style={{marginTop:8}}><div style={{fontSize:10,color:clr,marginBottom:3}}>★ 最注目特許</div><div style={{fontSize:11,color:c.text,lineHeight:1.5}}>{d.top_patent}</div></div>}
-                </div>);
-              })}
-            </div>
-            <div style={card}>
-              <div style={{fontSize:12,fontWeight:700,color:c.green,marginBottom:12}}>2050年 社会変革シナリオ 比較</div>
-              <div style={{display:"grid",gridTemplateColumns:"repeat("+cmpData.length+",1fr)",gap:12}}>
-                {cmpData.map((d,i) => (
-                  <div key={d.company_id}>
-                    <div style={{fontSize:11,fontWeight:700,color:CAT_COLORS[i*2],marginBottom:6}}>{d.company_name}</div>
-                    <div style={{fontSize:11,color:c.text,lineHeight:1.7,padding:"8px 10px",background:c.bg2,borderRadius:5,borderLeft:"2px solid "+CAT_COLORS[i*2]}}>{d.impact2050||"分析データなし"}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   🌐 全体概要タブ
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-function OverviewTab({ sbGet, c, card }) {
-  const [overview, setOverview] = useState(null);
-  const [loading,  setLoading]  = useState(false);
-  const [err,      setErr]      = useState("");
-
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true); setErr("");
-      try {
-        const [countryRows, companyRows, monthRows, summaryCount, analysisCount] = await Promise.all([
-          sbGet("patents?select=country&limit=10000"),
-          sbGet("patents?select=company_name&limit=10000"),
-          sbGet("patents?select=publication_date&limit=10000"),
-          sbGet("ai_summaries?select=patent_number&limit=1"),
-          sbGet("portfolio_analyses?select=id&limit=1"),
-        ]);
-        const byCountry = {}, byCompany = {}, byMonth = {};
-        (countryRows||[]).forEach(r => { byCountry[r.country]=(byCountry[r.country]||0)+1; });
-        (companyRows||[]).forEach(r => { const k=r.company_name||"不明"; byCompany[k]=(byCompany[k]||0)+1; });
-        (monthRows||[]).forEach(r => { const m=(r.publication_date||"").slice(0,7); if(m) byMonth[m]=(byMonth[m]||0)+1; });
-        setOverview({ total:(countryRows||[]).length, byCountry, byCompany, byMonth });
-      } catch(e) { setErr("エラー: "+e.message); }
-      setLoading(false);
-    };
-    load();
-  }, [sbGet]);
-
-  const BarChart = ({ data, maxH=80, colorFn }) => {
-    const vals=Object.values(data), keys=Object.keys(data), max=Math.max(...vals,1);
-    return (<div style={{display:"flex",alignItems:"flex-end",gap:2,height:maxH}}>
-      {keys.map((k,i)=>(<div key={k} title={k+": "+vals[i]} style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"flex-end",minWidth:3}}>
-        <div style={{width:"100%",background:colorFn?colorFn(k,i):CAT_COLORS[i%CAT_COLORS.length],borderRadius:"2px 2px 0 0",height:Math.max(2,(vals[i]/max)*maxH)+"px",opacity:.85}}/>
-      </div>))}
-    </div>);
-  };
-
-  if (loading) return <div style={{textAlign:"center",paddingTop:60,color:c.muted}}>● データを集計中...</div>;
-  if (err)     return <div style={{padding:16,color:c.amber}}>{err}</div>;
-  if (!overview) return null;
-
-  return (
-    <div style={{flex:1,overflowY:"auto",padding:16}}>
-      <div style={{...card,marginBottom:14,display:"flex",gap:20,alignItems:"center",flexWrap:"wrap"}}>
-        <div><div style={{fontSize:11,color:c.muted,marginBottom:2}}>DB総特許数</div><div style={{fontSize:36,fontWeight:700,color:c.purple,fontFamily:"monospace"}}>{overview.total.toLocaleString()}</div></div>
-        <div style={{width:1,height:48,background:c.border}}/>
-        <div>
-          <div style={{fontSize:11,color:c.muted,marginBottom:6}}>国別内訳</div>
-          <div style={{display:"flex",gap:14}}>
-            {Object.entries(overview.byCountry).sort((a,b)=>b[1]-a[1]).map(([ct,n])=>(
-              <div key={ct}><span style={{fontSize:14,fontWeight:700,color:COUNTRY_COLORS[ct]||"#94a3b8"}}>{ct}: </span><span style={{fontSize:14,fontWeight:700,color:c.text}}>{n.toLocaleString()}</span></div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div style={{...card,marginBottom:14}}>
-        <div style={{fontSize:12,fontWeight:700,color:c.cyan,marginBottom:10}}>企業別 特許数</div>
-        <div style={{overflowX:"auto"}}>
-          <div style={{minWidth:600}}>
-            <BarChart data={Object.fromEntries(Object.entries(overview.byCompany).sort((a,b)=>b[1]-a[1]).slice(0,26))} maxH={90} colorFn={(_,i)=>CAT_COLORS[i%CAT_COLORS.length]}/>
-            <div style={{display:"flex",gap:0,marginTop:6}}>
-              {Object.entries(overview.byCompany).sort((a,b)=>b[1]-a[1]).slice(0,26).map(([k,v])=>(
-                <div key={k} style={{flex:1,minWidth:16,textAlign:"center"}}>
-                  <div style={{fontSize:7,color:c.muted,writingMode:"vertical-rl",transform:"rotate(180deg)",height:36,overflow:"hidden"}}>{k.slice(0,10)}</div>
-                  <div style={{fontSize:8,color:c.text,fontWeight:600}}>{v}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div style={card}>
-        <div style={{fontSize:12,fontWeight:700,color:c.green,marginBottom:10}}>月別 出願トレンド</div>
-        <BarChart data={Object.fromEntries(Object.entries(overview.byMonth).sort())} maxH={80} colorFn={()=>c.green}/>
-        <div style={{display:"flex",justifyContent:"space-between",marginTop:4,fontSize:10,color:c.muted}}>
-          <span>{Object.keys(overview.byMonth).sort()[0]}</span>
-          <span>{Object.keys(overview.byMonth).sort().slice(-1)[0]}</span>
-        </div>
-      </div>
     </div>
   );
 }

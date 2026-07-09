@@ -1,0 +1,2321 @@
+OpenAlex 機関候補一覧 (生成日: 2026-07-05)
+対象: 80社
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+amorepacific  |  検索: "Amorepacific"  |  グループ: beauty
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I77107153  Amorepacific (South Korea) ★推奨
+    論文: 1,366  被引用: 141,099  国: KR  種別: company
+    直近: 2022:54  2023:34  2024:41
+    ROR: https://ror.org/031p65n62
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+beiersdorf  |  検索: "Beiersdorf"  |  グループ: beauty
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I106618798  Beiersdorf (Germany) ★推奨
+    論文: 1,922  被引用: 140,135  国: DE  種別: company
+    直近: 2022:56  2023:67  2024:94
+    ROR: https://ror.org/04aqg9s78
+  I4210094777  Beiersdorf (Russia)
+    論文: 1  被引用: 0  国: RU  種別: company
+    直近: 2024:1
+    ROR: https://ror.org/00tf0tc42
+  I4405267695  Beiersdorf (Malaysia) SDN. BHD. (Malaysia)
+    論文: 0  被引用: 0  国: MY  種別: company
+    ROR: https://ror.org/03xsgxc91
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+colgate  |  検索: "Colgate-Palmolive"  |  グループ: beauty
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I4210135004  Colgate-Palmolive (United States) ★推奨
+    論文: 1,184  被引用: 62,751  国: US  種別: company
+    直近: 2022:54  2023:51  2024:42
+    ROR: https://ror.org/03q50jp21
+    子機関: 2件
+      - Colgate-Palmolive (Switzerland) (I305386) [CH]
+      - Colgate-Palmolive (India) (I4210100887) [IN]
+  I305386  Colgate-Palmolive (Switzerland)
+    論文: 504  被引用: 17,448  国: CH  種別: company
+    直近: 2022:12  2023:9  2024:18
+    ROR: https://ror.org/04etgav66
+    親: Colgate-Palmolive (United States) (I4210135004)
+  I4210100887  Colgate-Palmolive (India)
+    論文: 31  被引用: 1,050  国: IN  種別: company
+    直近: 2022:1  2023:4  2024:1
+    ROR: https://ror.org/015vve507
+    親: Colgate-Palmolive (United States) (I4210135004)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+coty  |  検索: "Coty"  |  グループ: beauty
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I4210106453  Coty (United States) ★推奨
+    論文: 14  被引用: 57  国: US  種別: company
+    直近: 2024:1
+    ROR: https://ror.org/01ftyyd55
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+esteelauder  |  検索: "Estee Lauder"  |  グループ: beauty
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ⚠ 候補なし — 検索名を変えて再試行してください
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+haleon  |  検索: "Haleon"  |  グループ: beauty
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ⚠ 候補なし — 検索名を変えて再試行してください
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+henkel  |  検索: "Henkel"  |  グループ: beauty
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I71187865  Henkel (Germany) ★推奨
+    論文: 3,307  被引用: 105,171  国: DE  種別: company
+    直近: 2022:88  2023:114  2024:95
+    ROR: https://ror.org/0526cz443
+    子機関: 5件
+      - Henkel (United States) (I4210111733) [US]
+      - Henkel (Netherlands) (I4210131746) [NL]
+      - Henkel (Ireland) (I4210153795) [IE]
+      - Henkel (United Kingdom) (I4210155725) [GB]
+      - Henkel (Belgium) (I4210156672) [BE]
+  I4210111733  Henkel (United States)
+    論文: 209  被引用: 6,618  国: US  種別: company
+    直近: 2022:2  2023:12  2024:4
+    ROR: https://ror.org/01h0eq657
+    親: Henkel (Germany) (I71187865)
+  I4210153795  Henkel (Ireland)
+    論文: 47  被引用: 821  国: IE  種別: company
+    直近: 2022:1  2023:6  2024:3
+    ROR: https://ror.org/04tv3wg24
+    親: Henkel (Germany) (I71187865)
+  I4210155725  Henkel (United Kingdom)
+    論文: 46  被引用: 823  国: GB  種別: company
+    直近: 2023:1  2024:1
+    ROR: https://ror.org/05qg4my54
+    親: Henkel (Germany) (I71187865)
+  I4210156672  Henkel (Belgium)
+    論文: 20  被引用: 545  国: BE  種別: company
+    直近: 2023:1  2024:1
+    ROR: https://ror.org/04pthvp83
+    親: Henkel (Germany) (I71187865)
+  I4210164308  Gerda Henkel Foundation
+    論文: 161  被引用: 452  国: DE  種別: nonprofit
+    直近: 2022:15  2023:19  2024:5
+    ROR: https://ror.org/0584kkb18
+  I4210131746  Henkel (Netherlands)
+    論文: 3  被引用: 13  国: NL  種別: company
+    直近: 2024:1
+    ROR: https://ror.org/03ct7hd51
+    親: Henkel (Germany) (I71187865)
+  I4405265183  Henkel Japan Ltd. (Japan)
+    論文: 0  被引用: 0  国: JP  種別: company
+    ROR: https://ror.org/0437mtn79
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+jnjconsumer  |  検索: "Johnson Johnson"  |  グループ: beauty
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I1330063522  Johnson & Johnson (United States) ★推奨
+    論文: 14,174  被引用: 1,496,481  国: US  種別: company
+    直近: 2022:523  2023:569  2024:725
+    ROR: https://ror.org/03qd7mz70
+    子機関: 27件
+      - Janssen (Belgium) (I137982388) [BE]
+      - Johnson & Johnson (Switzerland) (I4210088657) [CH]
+      - Janssen (France) (I4210088728) [FR]
+      - Johnson & Johnson (Ireland) (I4210089561) [IE]
+      - Johnson & Johnson (France) (I4210092212) [FR]
+      - Janssen (Ireland) (I4210104516) [IE]
+      - Johnson & Johnson (Sweden) (I4210110219) [SE]
+      - Janssen (Switzerland) (I4210113301) [CH]
+      ... 他19件
+  I2802203029  Johnson University
+    論文: 26,510  被引用: 2,193,380  国: US  種別: education
+    直近: 2022:1315  2023:1342  2024:1409
+    ROR: https://ror.org/04dpnfr42
+  I4210157709  Johnson & Johnson (Netherlands)
+    論文: 464  被引用: 91,733  国: NL  種別: company
+    直近: 2022:6  2023:8  2024:22
+    ROR: https://ror.org/04vkhtf23
+    親: Johnson & Johnson (United States) (I1330063522)
+  I4210140598  Johnson & Johnson (United Kingdom)
+    論文: 809  被引用: 100,360  国: GB  種別: company
+    直近: 2022:35  2023:41  2024:64
+    ROR: https://ror.org/03qwpn290
+    親: Johnson & Johnson (United States) (I1330063522)
+  I4210149382  Johnson Space Center
+    論文: 25,448  被引用: 881,193  国: US  種別: facility
+    直近: 2022:482  2023:673  2024:448
+    ROR: https://ror.org/04xx4z452
+    親: National Aeronautics and Space Administration (I4210124779)
+    子機関: 1件
+      - White Sands Test Facility (I4387155733) [null]
+  I4210138366  Johnson Foundation
+    論文: 2,570  被引用: 472,222  国: US  種別: nonprofit
+    直近: 2022:6  2023:2  2024:2
+    ROR: https://ror.org/037d2wg57
+  I4210135437  Johnson & Johnson (Israel)
+    論文: 1,290  被引用: 47,708  国: IL  種別: company
+    直近: 2022:40  2023:48  2024:90
+    ROR: https://ror.org/03kzp5v39
+    親: Johnson & Johnson (United States) (I1330063522)
+    子機関: 1件
+      - Biosense Webster (Israel) (I4387155032) [IL]
+  I46968129  Robert Wood Johnson Foundation
+    論文: 4,172  被引用: 520,608  国: US  種別: nonprofit
+    直近: 2022:57  2023:40  2024:29
+    ROR: https://ror.org/02ymmdj85
+  I4210160666  Johnson & Johnson (Brazil)
+    論文: 554  被引用: 37,646  国: BR  種別: company
+    直近: 2022:12  2023:15  2024:27
+    ROR: https://ror.org/04f89zf73
+    親: Johnson & Johnson (United States) (I1330063522)
+  I4210110219  Johnson & Johnson (Sweden)
+    論文: 340  被引用: 25,839  国: SE  種別: company
+    直近: 2022:17  2023:28  2024:19
+    ROR: https://ror.org/020jwmq86
+    親: Johnson & Johnson (United States) (I1330063522)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+kao  |  検索: "Kao Corporation"  |  グループ: beauty
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I207623266  Kao Corporation (Japan) ★推奨
+    論文: 3,813  被引用: 318,404  国: JP  種別: company
+    直近: 2022:124  2023:140  2024:146
+    ROR: https://ror.org/016t1kc57
+    子機関: 3件
+      - Kao Corporation (Germany) (I4210105503) [DE]
+      - Kao Corporation (United States) (I4210108260) [US]
+      - Kao Corporation (Spain) (I4210131047) [ES]
+  I4210105503  Kao Corporation (Germany)
+    論文: 384  被引用: 8,061  国: DE  種別: company
+    直近: 2022:16  2023:20  2024:23
+    ROR: https://ror.org/00ynxc274
+    親: Kao Corporation (Japan) (I207623266)
+  I4210108260  Kao Corporation (United States)
+    論文: 51  被引用: 3,587  国: US  種別: company
+    直近: 2022:1  2023:2
+    ROR: https://ror.org/01qkmhj58
+    親: Kao Corporation (Japan) (I207623266)
+  I4210131047  Kao Corporation (Spain)
+    論文: 30  被引用: 353  国: ES  種別: company
+    直近: 2023:2  2024:1
+    ROR: https://ror.org/03826h192
+    親: Kao Corporation (Japan) (I207623266)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+kose  |  検索: "Kose"  |  グループ: beauty
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ⚠ 候補なし — 検索名を変えて再試行してください
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+loreal  |  検索: "L'Oreal"  |  グループ: beauty
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I4210163783  L'Oreal (United States) ★推奨
+    論文: 345  被引用: 20,608  国: US  種別: company
+    直近: 2022:20  2023:21  2024:33
+    ROR: https://ror.org/054n84d53
+    親: L'Oréal (France) (I14285755)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+lghh  |  検索: "LG Household"  |  グループ: beauty
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ⚠ 候補なし — 検索名を変えて再試行してください
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+lion  |  検索: "Lion Corporation"  |  グループ: beauty
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I173170729  Lion Corporation (Japan) ★推奨
+    論文: 1,114  被引用: 44,113  国: JP  種別: company
+    直近: 2022:39  2023:29  2024:27
+    ROR: https://ror.org/01bt8n520
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+lvmh  |  検索: "LVMH"  |  グループ: beauty
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I4210093200  LVMH (France) ★推奨
+    論文: 295  被引用: 16,117  国: FR  種別: company
+    直近: 2022:20  2023:12  2024:18
+    ROR: https://ror.org/00n7ybs24
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+pg  |  検索: "Procter Gamble"  |  グループ: beauty
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I74680897  Procter & Gamble (United States) ★推奨
+    論文: 8,683  被引用: 965,829  国: US  種別: company
+    直近: 2022:123  2023:120  2024:108
+    ROR: https://ror.org/04dkns738
+    子機関: 9件
+      - Procter & Gamble (India) (I4210102648) [IN]
+      - Procter & Gamble (Netherlands) (I4210108292) [NL]
+      - Procter & Gamble (Italy) (I4210109138) [IT]
+      - Procter & Gamble (Belgium) (I4210114316) [BE]
+      - Procter & Gamble (United Kingdom) (I4210115918) [GB]
+      - Procter & Gamble (Germany) (I4210128863) [DE]
+      - Procter & Gamble (Canada) (I4210145419) [CA]
+      - Procter & Gamble (Switzerland) (I4210160032) [CH]
+      ... 他1件
+  I4210115918  Procter & Gamble (United Kingdom)
+    論文: 861  被引用: 55,261  国: GB  種別: company
+    直近: 2022:29  2023:21  2024:37
+    ROR: https://ror.org/02a8cv967
+    親: Procter & Gamble (United States) (I74680897)
+  I4210102648  Procter & Gamble (India)
+    論文: 605  被引用: 43,448  国: IN  種別: company
+    直近: 2022:2  2023:7  2024:27
+    ROR: https://ror.org/01bnchp17
+    親: Procter & Gamble (United States) (I74680897)
+  I4210114316  Procter & Gamble (Belgium)
+    論文: 555  被引用: 37,285  国: BE  種別: company
+    直近: 2022:17  2023:16  2024:11
+    ROR: https://ror.org/027f7xa47
+    親: Procter & Gamble (United States) (I74680897)
+  I4210128863  Procter & Gamble (Germany)
+    論文: 890  被引用: 27,170  国: DE  種別: company
+    直近: 2022:19  2023:34  2024:41
+    ROR: https://ror.org/02t2pyr24
+    親: Procter & Gamble (United States) (I74680897)
+  I4210108292  Procter & Gamble (Netherlands)
+    論文: 423  被引用: 24,073  国: NL  種別: company
+    直近: 2022:8  2023:6  2024:7
+    ROR: https://ror.org/01sf6dn24
+    親: Procter & Gamble (United States) (I74680897)
+  I4210145419  Procter & Gamble (Canada)
+    論文: 176  被引用: 10,232  国: CA  種別: company
+    直近: 2023:1  2024:1
+    ROR: https://ror.org/04rcgpb63
+    親: Procter & Gamble (United States) (I74680897)
+  I4210109138  Procter & Gamble (Italy)
+    論文: 191  被引用: 8,718  国: IT  種別: company
+    直近: 2022:4  2023:8  2024:10
+    ROR: https://ror.org/01tdcdz60
+    親: Procter & Gamble (United States) (I74680897)
+  I4210160032  Procter & Gamble (Switzerland)
+    論文: 119  被引用: 4,319  国: CH  種別: company
+    直近: 2022:2  2023:6  2024:3
+    ROR: https://ror.org/04djzg510
+    親: Procter & Gamble (United States) (I74680897)
+  I4210162654  Procter & Gamble (France)
+    論文: 50  被引用: 1,341  国: FR  種別: company
+    直近: 2024:2
+    ROR: https://ror.org/04p972q78
+    親: Procter & Gamble (United States) (I74680897)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+polaorbis  |  検索: "Pola Orbis"  |  グループ: beauty
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ⚠ 候補なし — 検索名を変えて再試行してください
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+reckitt  |  検索: "Reckitt Benckiser"  |  グループ: beauty
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I51036467  Reckitt Benckiser (Netherlands)
+    論文: 508  被引用: 33,011  国: NL  種別: company
+    直近: 2022:8  2023:12  2024:18
+    ROR: https://ror.org/00647p549
+    親: Reckitt Benckiser (United Kingdom) (I4210115825)
+  I4210125531  Reckitt Benckiser (United States)
+    論文: 649  被引用: 36,610  国: US  種別: company
+    直近: 2022:35  2023:32  2024:43
+    ROR: https://ror.org/030893n97
+    親: Reckitt Benckiser (United Kingdom) (I4210115825)
+  I4210115825  Reckitt Benckiser (United Kingdom) ★推奨
+    論文: 709  被引用: 32,673  国: GB  種別: company
+    直近: 2022:26  2023:43  2024:39
+    ROR: https://ror.org/01g87hr29
+    子機関: 3件
+      - Reckitt Benckiser (Germany) (I4210090429) [DE]
+      - Reckitt Benckiser (United States) (I4210125531) [US]
+      - Reckitt Benckiser (Netherlands) (I51036467) [NL]
+  I4210090429  Reckitt Benckiser (Germany)
+    論文: 19  被引用: 108  国: DE  種別: company
+    直近: 2022:2  2023:4  2024:5
+    ROR: https://ror.org/00arbsy46
+    親: Reckitt Benckiser (United Kingdom) (I4210115825)
+  I4405267509  Reckitt Benckiser Healthcare France (France)
+    論文: 0  被引用: 0  国: FR  種別: company
+    ROR: https://ror.org/032g2af03
+  I4405268051  Reckitt Benckiser Health Limited (United Kingdom)
+    論文: 0  被引用: 0  国: GB  種別: company
+    ROR: https://ror.org/05jqjhm27
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+rohto  |  検索: "Rohto Pharmaceutical"  |  グループ: beauty
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I4210123942  Rohto Pharmaceutical (Japan) ★推奨
+    論文: 315  被引用: 11,069  国: JP  種別: company
+    直近: 2022:52  2023:23  2024:29
+    ROR: https://ror.org/02y8ft411
+    子機関: 1件
+      - Rohto Pharmaceutical (United Kingdom) (I4210163967) [GB]
+  I4210163967  Rohto Pharmaceutical (United Kingdom)
+    論文: 62  被引用: 689  国: GB  種別: company
+    直近: 2022:2  2023:5  2024:3
+    ROR: https://ror.org/05ansvf21
+    親: Rohto Pharmaceutical (Japan) (I4210123942)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+shiseido  |  検索: "Shiseido"  |  グループ: beauty
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I4210123820  Shiseido Group (Japan) ★推奨
+    論文: 1,617  被引用: 106,590  国: JP  種別: company
+    直近: 2022:27  2023:47  2024:21
+    ROR: https://ror.org/03da3g825
+  I4210104652  Tomitahama Hospital
+    論文: 360  被引用: 9,654  国: JP  種別: healthcare
+    直近: 2022:15  2023:21  2024:8
+    ROR: https://ror.org/01fd5y629
+  I4405256021  Shiseido General Hospital
+    論文: 0  被引用: 0  国: JP  種別: healthcare
+    ROR: https://ror.org/03p1rmr05
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+unilever  |  検索: "Unilever"  |  グループ: beauty
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I1342131907  Unilever (United Kingdom) ★推奨
+    論文: 9,067  被引用: 977,210  国: GB  種別: company
+    直近: 2022:119  2023:129  2024:115
+    ROR: https://ror.org/05n8ah907
+    子機関: 12件
+      - Unilever (Canada) (I4210092769) [CA]
+      - Unilever (Philippines) (I4210093509) [PH]
+      - Unilever (Portugal) (I4210098505) [PT]
+      - Unilever (United States) (I4210100606) [US]
+      - Unilever (Japan) (I4210102869) [JP]
+      - Unilever (China) (I4210103721) [CN]
+      - Unilever (Netherlands) (I4210113155) [NL]
+      - Unilever (Australia) (I4210115843) [AU]
+      ... 他4件
+  I4210113155  Unilever (Netherlands)
+    論文: 4,187  被引用: 487,796  国: NL  種別: company
+    直近: 2022:20  2023:23  2024:32
+    ROR: https://ror.org/02436cs38
+    親: Unilever (United Kingdom) (I1342131907)
+    子機関: 1件
+      - Unilever Foods Innovation Centre (I4210152926) [NL]
+  I4210100606  Unilever (United States)
+    論文: 681  被引用: 51,413  国: US  種別: company
+    直近: 2022:15  2023:23  2024:32
+    ROR: https://ror.org/00n3fv874
+    親: Unilever (United Kingdom) (I1342131907)
+  I4210124316  Unilever (India)
+    論文: 491  被引用: 27,371  国: IN  種別: company
+    直近: 2022:15  2023:9  2024:26
+    ROR: https://ror.org/023ha6621
+    親: Unilever (United Kingdom) (I1342131907)
+  I4210103721  Unilever (China)
+    論文: 211  被引用: 13,834  国: CN  種別: company
+    直近: 2022:8  2023:6  2024:15
+    ROR: https://ror.org/01b0cs606
+    親: Unilever (United Kingdom) (I1342131907)
+  I4210152926  Unilever Foods Innovation Centre
+    論文: 273  被引用: 8,935  国: NL  種別: facility
+    直近: 2022:46  2023:41  2024:39
+    ROR: https://ror.org/04nq8gx07
+    親: Unilever (Netherlands) (I4210113155)
+  I4210115843  Unilever (Australia)
+    論文: 34  被引用: 4,205  国: AU  種別: company
+    直近: 2023:3  2024:1
+    ROR: https://ror.org/01hpfvd96
+    親: Unilever (United Kingdom) (I1342131907)
+  I4210119897  Unilever (Germany)
+    論文: 209  被引用: 4,171  国: DE  種別: company
+    ROR: https://ror.org/02bcp9s34
+    親: Unilever (United Kingdom) (I1342131907)
+  I4210149033  Unilever (France)
+    論文: 46  被引用: 3,296  国: FR  種別: company
+    直近: 2023:1  2024:1
+    ROR: https://ror.org/04stw6a08
+    親: Unilever (United Kingdom) (I1342131907)
+  I4210135499  Unilever (Indonesia)
+    論文: 25  被引用: 216  国: ID  種別: company
+    直近: 2022:2  2023:2
+    ROR: https://ror.org/043smqe02
+    親: Unilever (United Kingdom) (I1342131907)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+alibaba  |  検索: "Alibaba"  |  グループ: china
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I45928872  Alibaba Group (China) ★推奨
+    論文: 6,836  被引用: 446,707  国: CN  種別: company
+    直近: 2022:896  2023:925  2024:895
+    ROR: https://ror.org/00k642b80
+    子機関: 2件
+      - Alibaba Group (Cayman Islands) (I4210086143) [KY]
+      - Alibaba Group (United States) (I4210095624) [US]
+  I4210095624  Alibaba Group (United States)
+    論文: 3,465  被引用: 218,716  国: US  種別: company
+    直近: 2022:371  2023:428  2024:407
+    ROR: https://ror.org/00rn0m335
+    親: Alibaba Group (China) (I45928872)
+  I4210086143  Alibaba Group (Cayman Islands)
+    論文: 770  被引用: 66,767  国: KY  種別: company
+    直近: 2022:118  2023:146  2024:66
+    ROR: https://ror.org/00mnrxf72
+    親: Alibaba Group (China) (I45928872)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+baidu  |  検索: "Baidu"  |  グループ: china
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I98301712  Baidu (China) ★推奨
+    論文: 6,608  被引用: 445,399  国: CN  種別: company
+    直近: 2022:652  2023:647  2024:520
+    ROR: https://ror.org/03vs3wt56
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+boe  |  検索: "BOE Technology"  |  グループ: china
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I4210100976  BOE Technology Group (China) ★推奨
+    論文: 2,235  被引用: 40,548  国: CN  種別: company
+    直近: 2022:321  2023:216  2024:262
+    ROR: https://ror.org/01cwwvj38
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+byd  |  検索: "BYD"  |  グループ: china
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I4210133343  BYD (China) ★推奨
+    論文: 544  被引用: 5,808  国: CN  種別: company
+    直近: 2022:13  2023:54  2024:125
+    ROR: https://ror.org/03kkp9n92
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+bytedance  |  検索: "ByteDance"  |  グループ: china
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I4405256866  ByteDance (China) ★推奨
+    論文: 0  被引用: 0  国: CN  種別: company
+    ROR: https://ror.org/04m8av638
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+cambricon  |  検索: "Cambricon"  |  グループ: china
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I4401726770  Cambricon (China) ★推奨
+    論文: 58  被引用: 6,157  国: null  種別: company
+    直近: 2022:6  2023:8  2024:11
+    ROR: https://ror.org/00r2rga43
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+catl  |  検索: "CATL"  |  グループ: china
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ⚠ 候補なし — 検索名を変えて再試行してください
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+dji  |  検索: "DJI"  |  グループ: china
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I4210148944  Dà-Jiāng Innovations Science and Technology (China) ★推奨
+    論文: 270  被引用: 27,550  国: CN  種別: company
+    直近: 2022:25  2023:29  2024:27
+    ROR: https://ror.org/04fmkfb67
+  I4210135822  Deutsches Jugendinstitut
+    論文: 1,446  被引用: 17,625  国: DE  種別: facility
+    直近: 2022:117  2023:140  2024:106
+    ROR: https://ror.org/03xptr862
+  I4387155806  Dubai Judicial Institute
+    論文: 1  被引用: 0  国: null  種別: education
+    ROR: https://ror.org/0467wah83
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+huawei  |  検索: "Huawei"  |  グループ: china
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I2250955327  Huawei Technologies (China) ★推奨
+    論文: 14,612  被引用: 587,847  国: CN  種別: company
+    直近: 2022:1466  2023:1685  2024:1549
+    ROR: https://ror.org/00cmhce21
+    子機関: 8件
+      - Huawei Technologies (Canada) (I4210115038) [CA]
+      - Huawei Technologies (France) (I4210123571) [FR]
+      - Huawei Technologies (Germany) (I4210129353) [DE]
+      - Huawei Technologies (United States) (I4210146936) [US]
+      - Huawei Technologies (Sweden) (I4210159102) [SE]
+      - Huawei Technologies (United Kingdom) (I4210160618) [GB]
+      - State Key Laboratory of Wireless Communication Access Technology (I4391767925) [null]
+      - Huawei Technologies (Poland) (I4405252550) [null]
+  I4210159102  Huawei Technologies (Sweden)
+    論文: 2,059  被引用: 185,310  国: SE  種別: company
+    直近: 2022:279  2023:242  2024:209
+    ROR: https://ror.org/0500fyd17
+    親: Huawei Technologies (China) (I2250955327)
+  I4210146936  Huawei Technologies (United States)
+    論文: 1,923  被引用: 163,660  国: US  種別: company
+    直近: 2022:102  2023:74  2024:64
+    ROR: https://ror.org/03jyqk712
+    親: Huawei Technologies (China) (I2250955327)
+  I4210115038  Huawei Technologies (Canada)
+    論文: 1,818  被引用: 87,401  国: CA  種別: company
+    直近: 2022:216  2023:265  2024:210
+    ROR: https://ror.org/026venb53
+    親: Huawei Technologies (China) (I2250955327)
+  I4210123571  Huawei Technologies (France)
+    論文: 1,760  被引用: 74,083  国: FR  種別: company
+    直近: 2022:157  2023:173  2024:129
+    ROR: https://ror.org/02rbzf697
+    親: Huawei Technologies (China) (I2250955327)
+  I4210160618  Huawei Technologies (United Kingdom)
+    論文: 2,205  被引用: 68,180  国: GB  種別: company
+    直近: 2022:239  2023:264  2024:205
+    ROR: https://ror.org/056gzgs71
+    親: Huawei Technologies (China) (I2250955327)
+  I4210129353  Huawei Technologies (Germany)
+    論文: 1,588  被引用: 51,930  国: DE  種別: company
+    直近: 2022:165  2023:199  2024:119
+    ROR: https://ror.org/038cdme44
+    親: Huawei Technologies (China) (I2250955327)
+    子機関: 1件
+      - Huawei German Research Center (I4210166625) [DE]
+  I4210166625  Huawei German Research Center
+    論文: 725  被引用: 22,333  国: DE  種別: facility
+    直近: 2022:60  2023:82  2024:72
+    ROR: https://ror.org/00z59w514
+    親: Huawei Technologies (Germany) (I4210129353)
+  I4405252550  Huawei Technologies (Poland)
+    論文: 0  被引用: 0  国: null  種別: company
+    ROR: https://ror.org/007a2ta87
+    親: Huawei Technologies (China) (I2250955327)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+iflytek  |  検索: "iFlytek"  |  グループ: china
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I4401726934  IFlyTek (China) ★推奨
+    論文: 2  被引用: 6  国: null  種別: company
+    直近: 2024:1
+    ROR: https://ror.org/009pwww24
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+jdcom  |  検索: "JD.com"  |  グループ: china
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I4210103986  Jingdong (China) ★推奨
+    論文: 4,779  被引用: 223,047  国: CN  種別: company
+    直近: 2022:484  2023:498  2024:396
+    ROR: https://ror.org/01dkjkq64
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+lenovo  |  検索: "Lenovo"  |  グループ: china
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I4210156165  Lenovo (China) ★推奨
+    論文: 1,303  被引用: 38,137  国: CN  種別: company
+    直近: 2022:102  2023:144  2024:181
+    ROR: https://ror.org/04srd9d93
+    子機関: 2件
+      - Lenovo (Singapore) (I4210096274) [SG]
+      - Lenovo (Japan) (I4210113523) [JP]
+  I4210113523  Lenovo (Japan)
+    論文: 64  被引用: 138  国: JP  種別: company
+    直近: 2022:2  2023:2  2024:6
+    ROR: https://ror.org/01gfjdb18
+    親: Lenovo (China) (I4210156165)
+  I4210096274  Lenovo (Singapore)
+    論文: 3  被引用: 72  国: SG  種別: company
+    ROR: https://ror.org/00mhktq57
+    親: Lenovo (China) (I4210156165)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+meituan  |  検索: "Meituan"  |  グループ: china
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I4405259410  Meituan (China) ★推奨
+    論文: 0  被引用: 0  国: CN  種別: company
+    ROR: https://ror.org/0272kpg92
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+nio  |  検索: "NIO"  |  グループ: china
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I75093019  National Institute of Oceanography
+    論文: 8,311  被引用: 510,025  国: IN  種別: facility
+    直近: 2022:443  2023:448  2024:489
+    ROR: https://ror.org/01gvkyp03
+    親: Council of Scientific and Industrial Research (I66760702)
+  I4210119956  National Institute of Oncology
+    論文: 6,097  被引用: 328,919  国: HU  種別: healthcare
+    直近: 2022:311  2023:377  2024:444
+    ROR: https://ror.org/02kjgsq44
+  I4401726823  Nio (China) ★推奨
+    論文: 29  被引用: 1,121  国: null  種別: company
+    直近: 2022:7  2023:10  2024:8
+    ROR: https://ror.org/02w12zj89
+  I4210114547  Northern Ireland Office
+    論文: 161  被引用: 2,982  国: GB  種別: government
+    直近: 2022:7  2023:9  2024:13
+    ROR: https://ror.org/01xgj3b22
+    親: Government of the United Kingdom (I2802373619)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+pingan  |  検索: "Ping An"  |  グループ: china
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I4401726822  Ping An (China) ★推奨
+    論文: 1,239  被引用: 41,533  国: null  種別: company
+    直近: 2022:130  2023:118  2024:113
+    ROR: https://ror.org/004yv2z91
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+sensetime  |  検索: "SenseTime"  |  グループ: china
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I4401727009  Sensetime (China) ★推奨
+    論文: 33  被引用: 7,707  国: CN  種別: company
+    直近: 2022:6  2023:3  2024:1
+    ROR: https://ror.org/049wsmj07
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+smic  |  検索: "SMIC"  |  グループ: china
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I1311218312  Semiconductor Manufacturing International (Italy) ★推奨
+    論文: 1,627  被引用: 49,724  国: IT  種別: company
+    直近: 2022:18  2023:5  2024:7
+    ROR: https://ror.org/03bxq3a59
+    親: Semiconductor Manufacturing International (China) (I4210142504)
+  I4210142504  Semiconductor Manufacturing International (China)
+    論文: 1,381  被引用: 16,784  国: CN  種別: company
+    直近: 2022:69  2023:69  2024:55
+    ROR: https://ror.org/03tf9y485
+    子機関: 1件
+      - Semiconductor Manufacturing International (Italy) (I1311218312) [IT]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+tencent  |  検索: "Tencent"  |  グループ: china
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I2250653659  Tencent (China) ★推奨
+    論文: 9,970  被引用: 757,939  国: CN  種別: company
+    直近: 2022:1303  2023:1452  2024:1493
+    ROR: https://ror.org/00hhjss72
+  I4210103558  Tencent Healthcare (China)
+    論文: 67  被引用: 6,156  国: CN  種別: company
+    直近: 2022:16  2023:9  2024:4
+    ROR: https://ror.org/019xckf23
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+xiaomi  |  検索: "Xiaomi"  |  グループ: china
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I862669128  Xiaomi (China) ★推奨
+    論文: 2,072  被引用: 78,983  国: CN  種別: company
+    直近: 2022:111  2023:154  2024:213
+    ROR: https://ror.org/029f7bn57
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+zte  |  検索: "ZTE"  |  グループ: china
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I75746372  ZTE (United States)
+    論文: 1,807  被引用: 81,664  国: US  種別: company
+    直近: 2022:60  2023:58  2024:75
+    ROR: https://ror.org/0518yg160
+    親: ZTE (China) (I4210098582)
+  I4210098582  ZTE (China) ★推奨
+    論文: 2,855  被引用: 46,864  国: CN  種別: company
+    直近: 2022:234  2023:243  2024:249
+    ROR: https://ror.org/00rjhhq63
+    子機関: 2件
+      - State Key Laboratory of Mobile Networks and Mobile Multimedia Technology (I4391767749) [null]
+      - ZTE (United States) (I75746372) [US]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+kddi  |  検索: "KDDI"  |  グループ: japan
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I4210164495  KDDI Research (Japan) ★推奨
+    論文: 3,664  被引用: 98,566  国: JP  種別: company
+    直近: 2022:209  2023:244  2024:207
+    ROR: https://ror.org/05qsqt662
+  I71799228  KDDI (Japan)
+    論文: 1,605  被引用: 24,238  国: JP  種別: company
+    直近: 2022:39  2023:46  2024:47
+    ROR: https://ror.org/03r7fm174
+    子機関: 1件
+      - au Asset Management Corporation (I4405266315) [JP]
+  I4399598423  KDDI Foundation
+    論文: 1  被引用: 0  国: null  種別: funder
+    直近: 2024:1
+    ROR: https://ror.org/005914142
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+nec  |  検索: "NEC Corporation"  |  グループ: japan
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I4210107353  NEC (United States) ★推奨
+    論文: 1,330  被引用: 116,815  国: US  種別: company
+    直近: 2022:52  2023:34  2024:38
+    ROR: https://ror.org/01v791m31
+    親: NEC (Japan) (I118347220)
+    子機関: 1件
+      - Center for Discrete Mathematics and Theoretical Computer Science (I2799411422) [US]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ntt  |  検索: "NTT"  |  グループ: japan
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I2251713219  NTT (Japan) ★推奨
+    論文: 39,274  被引用: 1,865,768  国: JP  種別: company
+    直近: 2022:701  2023:781  2024:812
+    ROR: https://ror.org/00berct97
+    子機関: 3件
+      - NTT (Italy) (I4210090123) [IT]
+      - NTT (United States) (I4210092597) [US]
+      - NTT (Germany) (I4210143714) [DE]
+  I4210105847  NTT Basic Research Laboratories
+    論文: 9,985  被引用: 673,142  国: JP  種別: facility
+    直近: 2022:179  2023:184  2024:155
+    ROR: https://ror.org/01m2pas06
+  I4210092597  NTT (United States)
+    論文: 2,831  被引用: 125,903  国: US  種別: company
+    直近: 2022:39  2023:37  2024:33
+    ROR: https://ror.org/004cn7092
+    親: NTT (Japan) (I2251713219)
+  I2801547476  NTT Medical Center
+    論文: 3,391  被引用: 113,332  国: JP  種別: healthcare
+    直近: 2022:244  2023:247  2024:247
+    ROR: https://ror.org/0285prp25
+  I4210090123  NTT (Italy)
+    論文: 579  被引用: 22,071  国: IT  種別: company
+    直近: 2022:7  2023:7  2024:9
+    ROR: https://ror.org/00d9y2633
+    親: NTT (Japan) (I2251713219)
+  I4210106580  NTT WEST Osaka Hospital
+    論文: 480  被引用: 12,520  国: JP  種別: healthcare
+    直近: 2022:3  2023:2  2024:1
+    ROR: https://ror.org/01bfp5e25
+  I4210143714  NTT (Germany)
+    論文: 66  被引用: 226  国: DE  種別: company
+    直近: 2022:2  2023:8  2024:2
+    ROR: https://ror.org/045vwce28
+    親: NTT (Japan) (I2251713219)
+    子機関: 1件
+      - DoCoMo Communications Laboratories Europe GmbH (I4210163160) [DE]
+  I4210166042  Tohoku Medical and Pharmaceutical University Wakabayashi Hospital
+    論文: 228  被引用: 6,937  国: JP  種別: healthcare
+    直近: 2022:3  2023:8  2024:12
+    ROR: https://ror.org/054fwx336
+    親: Tohoku Medical and Pharmaceutical University (I85324120)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+pfn  |  検索: "Preferred Networks"  |  グループ: japan
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I4210166566  Preferred Networks (Japan) ★推奨
+    論文: 617  被引用: 61,077  国: JP  種別: company
+    直近: 2022:40  2023:61  2024:56
+    ROR: https://ror.org/05xeefy56
+  I4405265697  Preferred Networks, Inc. (Japan)
+    論文: 0  被引用: 0  国: JP  種別: company
+    ROR: https://ror.org/05g5e9f37
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+omron  |  検索: "Omron"  |  グループ: japan
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I146230289  Omron (Japan) ★推奨
+    論文: 3,109  被引用: 141,338  国: JP  種別: company
+    直近: 2022:80  2023:133  2024:134
+    ROR: https://ror.org/00q0w1h45
+  I4405269902  OMRON Healthcare Co., Ltd. (Japan)
+    論文: 0  被引用: 0  国: JP  種別: company
+    ROR: https://ror.org/05jy5pk94
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+keyence  |  検索: "Keyence"  |  グループ: japan
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I4210159881  Keyence (Japan) ★推奨
+    論文: 27  被引用: 443  国: JP  種別: company
+    直近: 2022:1  2023:2  2024:2
+    ROR: https://ror.org/05gc25a42
+  I4405264728  Keyence Corporation (Japan)
+    論文: 0  被引用: 0  国: JP  種別: company
+    ROR: https://ror.org/02s7aa368
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+canon  |  検索: "Canon"  |  グループ: japan
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I1320697193  Canon (Japan) ★推奨
+    論文: 4,813  被引用: 212,594  国: JP  種別: company
+    直近: 2022:169  2023:199  2024:236
+    ROR: https://ror.org/05gg0gh87
+    子機関: 8件
+      - Canon (United Kingdom) (I4210119294) [GB]
+      - Canon (United States) (I4210119835) [US]
+      - Canon (France) (I4210121059) [FR]
+      - Canon (Australia) (I4210129385) [AU]
+      - Canon (Netherlands) (I4210137410) [NL]
+      - Canon (Germany) (I4210137876) [DE]
+      - Canon (Canada) (I4210157163) [CA]
+      - Canon Medical Research Europe (United Kingdom) (I4405258204) [GB]
+  I4210105067  Canon Anelva (Japan)
+    論文: 487  被引用: 30,800  国: JP  種別: company
+    直近: 2022:2  2023:5  2024:11
+    ROR: https://ror.org/01jfy6x14
+  I4210119835  Canon (United States)
+    論文: 1,027  被引用: 27,796  国: US  種別: company
+    直近: 2022:58  2023:76  2024:54
+    ROR: https://ror.org/02jv94566
+    親: Canon (Japan) (I1320697193)
+  I4399598468  Canon Medical Systems Corporation (Japan)
+    論文: 386  被引用: 8,854  国: null  種別: company
+    直近: 2022:51  2023:51  2024:47
+    ROR: https://ror.org/01qpswk97
+  I4210119294  Canon (United Kingdom)
+    論文: 193  被引用: 5,479  国: GB  種別: company
+    直近: 2022:11  2023:17  2024:10
+    ROR: https://ror.org/02s95xt63
+    親: Canon (Japan) (I1320697193)
+  I4210129385  Canon (Australia)
+    論文: 117  被引用: 3,289  国: AU  種別: company
+    直近: 2022:1  2023:1
+    ROR: https://ror.org/03895v451
+    親: Canon (Japan) (I1320697193)
+  I4210121059  Canon (France)
+    論文: 143  被引用: 2,322  国: FR  種別: company
+    直近: 2022:10  2023:2  2024:13
+    ROR: https://ror.org/02se40x69
+    親: Canon (Japan) (I1320697193)
+  I4210137410  Canon (Netherlands)
+    論文: 136  被引用: 1,941  国: NL  種別: company
+    直近: 2022:15  2023:16  2024:17
+    ROR: https://ror.org/03nvvdm73
+    親: Canon (Japan) (I1320697193)
+  I4210137876  Canon (Germany)
+    論文: 62  被引用: 628  国: DE  種別: company
+    直近: 2022:2  2023:2  2024:2
+    ROR: https://ror.org/04fbzr589
+    親: Canon (Japan) (I1320697193)
+  I4210140229  Canon Foundation in Europe
+    論文: 12  被引用: 496  国: NL  種別: nonprofit
+    直近: 2023:1
+    ROR: https://ror.org/03sjs8573
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+sony  |  検索: "Sony"  |  グループ: japan
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I4210122684  Sony Computer Science Laboratories
+    論文: 3,684  被引用: 193,278  国: JP  種別: facility
+    直近: 2022:137  2023:149  2024:139
+    ROR: https://ror.org/02nc46417
+  I1304132090  Sony (Taiwan) ★推奨
+    論文: 2,657  被引用: 115,193  国: TW  種別: company
+    直近: 2022:44  2023:91  2024:78
+    ROR: https://ror.org/0214y7014
+    親: Sony (Japan) (I4210143797)
+  I2800278093  Sony Corporation (United States)
+    論文: 2,208  被引用: 61,471  国: US  種別: company
+    直近: 2022:75  2023:94  2024:92
+    ROR: https://ror.org/05k91zb11
+  I4210131385  Sony (France)
+    論文: 153  被引用: 14,206  国: FR  種別: company
+    直近: 2022:7  2023:3  2024:7
+    ROR: https://ror.org/03cr99w51
+    親: Sony (Japan) (I4210143797)
+  I4210143797  Sony (Japan)
+    論文: 127  被引用: 2,799  国: JP  種別: company
+    直近: 2022:2  2023:23  2024:15
+    ROR: https://ror.org/04wzv3n59
+    子機関: 9件
+      - Sony (Taiwan) (I1304132090) [TW]
+      - Sony (Germany) (I4210108646) [DE]
+      - Sony (China) (I4210110621) [CN]
+      - Sony (Sweden) (I4210129561) [SE]
+      - Sony (France) (I4210131385) [FR]
+      - Sony (United Kingdom) (I4210146692) [GB]
+      - Sony (Spain) (I4210159191) [ES]
+      - Sony Interactive Entertainment (United States) (I4405259458) [US]
+      ... 他1件
+  I4210110621  Sony (China)
+    論文: 159  被引用: 2,635  国: CN  種別: company
+    直近: 2022:7  2023:21  2024:32
+    ROR: https://ror.org/02qd2bv04
+    親: Sony (Japan) (I4210143797)
+  I4210129561  Sony (Sweden)
+    論文: 95  被引用: 1,552  国: SE  種別: company
+    直近: 2022:9  2023:8  2024:13
+    ROR: https://ror.org/02t8vgv97
+    親: Sony (Japan) (I4210143797)
+  I4210146692  Sony (United Kingdom)
+    論文: 42  被引用: 1,804  国: GB  種別: company
+    直近: 2022:3  2023:2  2024:4
+    ROR: https://ror.org/04fxz7d50
+    親: Sony (Japan) (I4210143797)
+    子機関: 1件
+      - EMI (United Kingdom) (I4210109251) [GB]
+  I4210108646  Sony (Germany)
+    論文: 40  被引用: 879  国: DE  種別: company
+    直近: 2022:4  2023:4  2024:4
+    ROR: https://ror.org/01hcxsy48
+    親: Sony (Japan) (I4210143797)
+  I4210108843  Sony Digital Audio Disc Corporation (Austria)
+    論文: 37  被引用: 1,475  国: AT  種別: company
+    直近: 2023:2  2024:3
+    ROR: https://ror.org/01ngvra90
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+softbank  |  検索: "SoftBank"  |  グループ: japan
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I4210118101  SoftBank Robotics (France)
+    論文: 249  被引用: 14,547  国: FR  種別: company
+    直近: 2022:15  2023:10  2024:12
+    ROR: https://ror.org/02msvh720
+    親: SoftBank Group (Japan) (I4210120159)
+  I4210120159  SoftBank Group (Japan) ★推奨
+    論文: 568  被引用: 6,522  国: JP  種別: company
+    直近: 2022:58  2023:50  2024:50
+    ROR: https://ror.org/02ew2ks20
+    子機関: 1件
+      - SoftBank Robotics (France) (I4210118101) [FR]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+denso  |  検索: "Denso"  |  グループ: japan
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I67530263  Denso (United States) ★推奨
+    論文: 4,621  被引用: 68,256  国: US  種別: company
+    直近: 2022:143  2023:142  2024:129
+    ROR: https://ror.org/02w314k38
+    親: Denso (Japan) (I4210132650)
+  I4210132650  Denso (Japan)
+    論文: 1,463  被引用: 53,375  国: JP  種別: company
+    直近: 2022:45  2023:50  2024:37
+    ROR: https://ror.org/04hkpfa76
+    子機関: 2件
+      - Denso (Germany) (I4210162709) [DE]
+      - Denso (United States) (I67530263) [US]
+  I4210162709  Denso (Germany)
+    論文: 175  被引用: 3,831  国: DE  種別: company
+    直近: 2022:5  2023:17  2024:14
+    ROR: https://ror.org/05xtrfa17
+    親: Denso (Japan) (I4210132650)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+toyota  |  検索: "Toyota"  |  グループ: japan
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I4210165351  Toyota Central Research and Development Laboratories (Japan)
+    論文: 7,130  被引用: 812,958  国: JP  種別: company
+    直近: 2022:204  2023:209  2024:221
+    ROR: https://ror.org/05mjgqe69
+    親: Toyota Group (Japan) (I4210125472)
+  I4840577  Toyota Technological Institute
+    論文: 6,824  被引用: 313,673  国: JP  種別: education
+    直近: 2022:257  2023:234  2024:204
+    ROR: https://ror.org/001hv0k59
+  I1293612202  Toyota Motor Corporation (Switzerland) ★推奨
+    論文: 7,523  被引用: 285,647  国: CH  種別: company
+    直近: 2022:197  2023:210  2024:218
+    ROR: https://ror.org/05p0pbv75
+    親: Toyota Motor Corporation (Japan) (I4210137853)
+  I4210137853  Toyota Motor Corporation (Japan)
+    論文: 4,926  被引用: 250,867  国: JP  種別: company
+    直近: 2022:153  2023:160  2024:183
+    ROR: https://ror.org/02zqm6r10
+    親: Toyota Group (Japan) (I4210125472)
+    子機関: 6件
+      - Toyota Motor Corporation (Switzerland) (I1293612202) [CH]
+      - Toyota Motor North America (United States) (I4210093665) [US]
+      - Toyota Motor Corporation (Belgium) (I4210120547) [BE]
+      - Toyota Motor Corporation (Germany) (I4210129182) [DE]
+      - The Toyota Foundation (I4210130561) [JP]
+      - Toyota Motor Corporation (Canada) (I4210165215) [CA]
+  I4391768151  Toyota Research Institute
+    論文: 1,752  被引用: 135,317  国: null  種別: facility
+    直近: 2022:171  2023:196  2024:213
+    ROR: https://ror.org/04fpkc108
+    親: Toyota Group (Japan) (I4210125472)
+  I160992636  Toyota Technological Institute at Chicago
+    論文: 1,979  被引用: 191,241  国: US  種別: education
+    直近: 2022:76  2023:106  2024:70
+    ROR: https://ror.org/02sn5gb64
+  I4210093665  Toyota Motor North America (United States)
+    論文: 978  被引用: 60,537  国: US  種別: company
+    直近: 2022:78  2023:102  2024:62
+    ROR: https://ror.org/0076knn86
+    親: Toyota Motor Corporation (Japan) (I4210137853)
+    子機関: 1件
+      - Toyota Motor North America Research & Development (United States) (I4405261461) [US]
+  I917207718  Toyota Industries (United States)
+    論文: 596  被引用: 26,697  国: US  種別: company
+    直近: 2022:37  2023:48  2024:42
+    ROR: https://ror.org/0132ebr60
+    親: Toyota Industries (Japan) (I4210145315)
+  I4210092859  Toyota Memorial Hospital
+    論文: 890  被引用: 23,142  国: JP  種別: healthcare
+    直近: 2022:53  2023:50  2024:49
+    ROR: https://ror.org/00hcz6468
+  I4210120547  Toyota Motor Corporation (Belgium)
+    論文: 439  被引用: 20,729  国: BE  種別: company
+    直近: 2022:30  2023:35  2024:30
+    ROR: https://ror.org/023g86t37
+    親: Toyota Motor Corporation (Japan) (I4210137853)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+panasonic  |  検索: "Panasonic"  |  グループ: japan
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I1283155146  Panasonic (Japan) ★推奨
+    論文: 14,148  被引用: 689,579  国: JP  種別: company
+    直近: 2022:186  2023:204  2024:205
+    ROR: https://ror.org/011tm7n37
+    子機関: 6件
+      - Panasonic (Germany) (I4210086863) [DE]
+      - Panasonic (United States) (I4210095956) [US]
+      - Panasonic (Czechia) (I4210115537) [CZ]
+      - Panasonic (Poland) (I4210122264) [PL]
+      - Panasonic (United Kingdom) (I4210140227) [GB]
+      - Panasonic (China) (I4210155557) [CN]
+  I4210155557  Panasonic (China)
+    論文: 1,463  被引用: 22,971  国: CN  種別: company
+    直近: 2022:13  2023:17  2024:22
+    ROR: https://ror.org/05sqbw136
+    親: Panasonic (Japan) (I1283155146)
+  I4210095956  Panasonic (United States)
+    論文: 633  被引用: 20,296  国: US  種別: company
+    直近: 2022:5  2023:7  2024:10
+    ROR: https://ror.org/00pvgrv63
+    親: Panasonic (Japan) (I1283155146)
+  I4210122264  Panasonic (Poland)
+    論文: 406  被引用: 11,346  国: PL  種別: company
+    直近: 2022:12  2023:7  2024:6
+    ROR: https://ror.org/02heqf923
+    親: Panasonic (Japan) (I1283155146)
+  I4210086863  Panasonic (Germany)
+    論文: 226  被引用: 5,197  国: DE  種別: company
+    直近: 2022:13  2023:2  2024:19
+    ROR: https://ror.org/000en4h24
+    親: Panasonic (Japan) (I1283155146)
+  I4210140227  Panasonic (United Kingdom)
+    論文: 50  被引用: 1,549  国: GB  種別: company
+    直近: 2022:2
+    ROR: https://ror.org/03se9cq71
+    親: Panasonic (Japan) (I1283155146)
+  I4210115537  Panasonic (Czechia)
+    論文: 6  被引用: 160  国: CZ  種別: company
+    直近: 2022:1  2023:2  2024:1
+    ROR: https://ror.org/0235qjz17
+    親: Panasonic (Japan) (I1283155146)
+  I4210134967  Panasonic (Russia)
+    論文: 1  被引用: 1  国: RU  種別: company
+    ROR: https://ror.org/0468j3t74
+  I4405262617  Panasonic Education Foundation
+    論文: 0  被引用: 0  国: JP  種別: nonprofit
+    ROR: https://ror.org/04a3fxw44
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+renesas  |  検索: "Renesas Electronics"  |  グループ: japan
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I4210153176  Renesas Electronics (Japan) ★推奨
+    論文: 1,836  被引用: 82,184  国: JP  種別: company
+    直近: 2022:85  2023:26  2024:25
+    ROR: https://ror.org/058wb7691
+    子機関: 3件
+      - Intersil (United States) (I106903285) [US]
+      - Renesas Electronics (United Kingdom) (I4210098546) [GB]
+      - Renesas Electronics (United States) (I75636454) [US]
+  I75636454  Renesas Electronics (United States)
+    論文: 1,271  被引用: 34,175  国: US  種別: company
+    直近: 2022:29  2023:32  2024:44
+    ROR: https://ror.org/014775w70
+    親: Renesas Electronics (Japan) (I4210153176)
+  I4210098546  Renesas Electronics (United Kingdom)
+    論文: 14  被引用: 978  国: GB  種別: company
+    直近: 2023:3
+    ROR: https://ror.org/00eys7z46
+    親: Renesas Electronics (Japan) (I4210153176)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+mitsubishie  |  検索: "Mitsubishi Electric"  |  グループ: japan
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I4210133125  Mitsubishi Electric (Japan) ★推奨
+    論文: 14,514  被引用: 522,222  国: JP  種別: company
+    直近: 2022:236  2023:325  2024:347
+    ROR: https://ror.org/033y26782
+    親: Mitsubishi Group (Japan) (I1306287861)
+    子機関: 5件
+      - Mitsubishi Electric (Germany) (I39854257) [DE]
+      - Mitsubishi Electric (France) (I4210089619) [FR]
+      - Mitsubishi Electric (Netherlands) (I4210133619) [NL]
+      - Mitsubishi Electric (United States) (I4210159266) [US]
+      - Mitsubishi Electric (China) Corporation (China) (I4405253118) [CN]
+  I4210159266  Mitsubishi Electric (United States)
+    論文: 7,949  被引用: 391,424  国: US  種別: company
+    直近: 2022:228  2023:252  2024:234
+    ROR: https://ror.org/053jnhe44
+    親: Mitsubishi Electric (Japan) (I4210133125)
+  I39854257  Mitsubishi Electric (Germany)
+    論文: 3,643  被引用: 84,631  国: DE  種別: company
+    直近: 2022:80  2023:89  2024:86
+    ROR: https://ror.org/04ccqwj03
+    親: Mitsubishi Electric (Japan) (I4210133125)
+  I4210089619  Mitsubishi Electric (France)
+    論文: 594  被引用: 14,527  国: FR  種別: company
+    直近: 2022:27  2023:30  2024:35
+    ROR: https://ror.org/0075b7k59
+    親: Mitsubishi Electric (Japan) (I4210133125)
+  I4210149377  Toshiba Mitsubishi-Electric Industrial Systems Corporation (Japan)
+    論文: 725  被引用: 14,674  国: JP  種別: company
+    直近: 2022:28  2023:18  2024:30
+    ROR: https://ror.org/04xpgws89
+  I4210133619  Mitsubishi Electric (Netherlands)
+    論文: 299  被引用: 2,486  国: NL  種別: company
+    直近: 2022:15  2023:5  2024:10
+    ROR: https://ror.org/04kf71z43
+    親: Mitsubishi Electric (Japan) (I4210133125)
+  I4405253118  Mitsubishi Electric (China) Corporation (China)
+    論文: 0  被引用: 0  国: CN  種別: company
+    ROR: https://ror.org/00b252v89
+    親: Mitsubishi Electric (Japan) (I4210133125)
+  I4405253225  Mitsubishi Electric Research Laboratories (United States)
+    論文: 0  被引用: 0  国: US  種別: company
+    ROR: https://ror.org/00e2e3n51
+    親: Mitsubishi Group (Japan) (I1306287861)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+nintendo  |  検索: "Nintendo"  |  グループ: japan
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I4210095724  Nintendo (Japan) ★推奨
+    論文: 67  被引用: 663  国: JP  種別: company
+    直近: 2022:3  2023:2  2024:3
+    ROR: https://ror.org/00pscny09
+    子機関: 2件
+      - Nintendo (France) (I4210095638) [FR]
+      - Nintendo (United States) (I4210152761) [US]
+  I4210095638  Nintendo (France)
+    論文: 7  被引用: 35  国: FR  種別: company
+    直近: 2022:1
+    ROR: https://ror.org/00p287g25
+    親: Nintendo (Japan) (I4210095724)
+  I4210152761  Nintendo (United States)
+    論文: 5  被引用: 19  国: US  種別: company
+    ROR: https://ror.org/042cj6q83
+    親: Nintendo (Japan) (I4210095724)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+fujifilm  |  検索: "Fujifilm"  |  グループ: japan
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I2948482138  Fujifilm (Japan) ★推奨
+    論文: 3,234  被引用: 123,898  国: JP  種別: company
+    直近: 2022:172  2023:136  2024:130
+    ROR: https://ror.org/0493bmq37
+    子機関: 5件
+      - Fujifilm (Germany) (I4210091492) [DE]
+      - Fujifilm (United States) (I4210102077) [US]
+      - Fujifilm (United Kingdom) (I4210144224) [GB]
+      - Fujifilm (South Korea) (I4210160340) [KR]
+      - Fujifilm (Netherlands) (I4210166184) [NL]
+  I4210165896  FujiFilm VisualSonics (Canada)
+    論文: 154  被引用: 14,369  国: CA  種別: company
+    直近: 2022:3  2023:6  2024:10
+    ROR: https://ror.org/05xj42126
+  I4210166184  Fujifilm (Netherlands)
+    論文: 189  被引用: 7,096  国: NL  種別: company
+    直近: 2022:10  2023:13  2024:12
+    ROR: https://ror.org/05b6fta51
+    親: Fujifilm (Japan) (I2948482138)
+  I4210102077  Fujifilm (United States)
+    論文: 111  被引用: 4,103  国: US  種別: company
+    直近: 2022:6  2023:14  2024:9
+    ROR: https://ror.org/017fwsj06
+    親: Fujifilm (Japan) (I2948482138)
+  I4210144224  Fujifilm (United Kingdom)
+    論文: 92  被引用: 2,648  国: GB  種別: company
+    直近: 2022:3  2023:9  2024:12
+    ROR: https://ror.org/04bq7yh11
+    親: Fujifilm (Japan) (I2948482138)
+  I4210091492  Fujifilm (Germany)
+    論文: 3  被引用: 3  国: DE  種別: company
+    直近: 2023:1
+    ROR: https://ror.org/00ktr8190
+    親: Fujifilm (Japan) (I2948482138)
+  I4210160340  Fujifilm (South Korea)
+    論文: 0  被引用: 0  国: KR  種別: company
+    ROR: https://ror.org/04xnk9j36
+    親: Fujifilm (Japan) (I2948482138)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+fujitsu  |  検索: "Fujitsu"  |  グループ: japan
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I2252096349  Fujitsu (Japan) ★推奨
+    論文: 15,598  被引用: 758,346  国: JP  種別: company
+    直近: 2022:233  2023:219  2024:264
+    ROR: https://ror.org/038e2g226
+    子機関: 4件
+      - Fujitsu (United States) (I4210094759) [US]
+      - Fujitsu (Sweden) (I4210137185) [SE]
+      - Fujitsu (United Kingdom) (I4210153853) [GB]
+      - Fujitsu (Germany) (I4210162263) [DE]
+  I4210094759  Fujitsu (United States)
+    論文: 2,092  被引用: 64,394  国: US  種別: company
+    直近: 2022:44  2023:30  2024:38
+    ROR: https://ror.org/0073whr05
+    親: Fujitsu (Japan) (I2252096349)
+  I4210159607  Fujitsu (China)
+    論文: 1,837  被引用: 36,212  国: CN  種別: company
+    直近: 2022:69  2023:70  2024:68
+    ROR: https://ror.org/04w4yzw62
+  I4210153853  Fujitsu (United Kingdom)
+    論文: 879  被引用: 16,315  国: GB  種別: company
+    直近: 2022:12  2023:14  2024:26
+    ROR: https://ror.org/053ny5136
+    親: Fujitsu (Japan) (I2252096349)
+  I4210162263  Fujitsu (Germany)
+    論文: 185  被引用: 10,314  国: DE  種別: company
+    直近: 2022:5  2023:4  2024:9
+    ROR: https://ror.org/04max0939
+    親: Fujitsu (Japan) (I2252096349)
+  I4210092470  Fujitsu Ten (Japan)
+    論文: 78  被引用: 900  国: JP  種別: company
+    直近: 2024:1
+    ROR: https://ror.org/00jjgc591
+  I4210137185  Fujitsu (Sweden)
+    論文: 2  被引用: 0  国: SE  種別: company
+    直近: 2024:1
+    ROR: https://ror.org/03w6bzp59
+    親: Fujitsu (Japan) (I2252096349)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+hitachi  |  検索: "Hitachi"  |  グループ: japan
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I65143321  Hitachi (Japan) ★推奨
+    論文: 52,448  被引用: 1,855,027  国: JP  種別: company
+    直近: 2022:870  2023:892  2024:839
+    ROR: https://ror.org/02exqgm79
+    子機関: 11件
+      - Hitachi (United Kingdom) (I4210089357) [GB]
+      - Hitachi (Sweden) (I4210107938) [SE]
+      - Hitachi (Germany) (I4210118907) [DE]
+      - Hitachi (South Korea) (I4210119081) [KR]
+      - Hitachi (United States) (I4210137426) [US]
+      - Hitachi (France) (I4210142752) [FR]
+      - Hitachi (Netherlands) (I4210145174) [NL]
+      - Hitachi (Canada) (I4210150617) [CA]
+      ... 他3件
+  I86725329  Hitachi Global Storage Technologies (United States)
+    論文: 2,325  被引用: 161,102  国: US  種別: company
+    直近: 2022:48  2023:58  2024:62
+    ROR: https://ror.org/02q0s1x22
+  I4210089357  Hitachi (United Kingdom)
+    論文: 2,724  被引用: 88,474  国: GB  種別: company
+    直近: 2022:42  2023:41  2024:35
+    ROR: https://ror.org/0097wyf31
+    親: Hitachi (Japan) (I65143321)
+  I4210149859  Hitachi General Hospital
+    論文: 1,340  被引用: 32,134  国: JP  種別: healthcare
+    直近: 2022:90  2023:97  2024:73
+    ROR: https://ror.org/03sc99320
+  I4210108607  Hitachi Maxell (Japan)
+    論文: 706  被引用: 26,140  国: JP  種別: company
+    直近: 2022:9  2023:4  2024:4
+    ROR: https://ror.org/01qfa5t68
+  I4210137426  Hitachi (United States)
+    論文: 1,104  被引用: 23,451  国: US  種別: company
+    直近: 2022:27  2023:20  2024:30
+    ROR: https://ror.org/03pwpr214
+    親: Hitachi (Japan) (I65143321)
+  I4387156034  Hitachi High-Tech (Japan)
+    論文: 1,098  被引用: 21,065  国: null  種別: company
+    直近: 2022:51  2023:56  2024:59
+    ROR: https://ror.org/033a1rv92
+    親: Hitachi (Japan) (I65143321)
+  I4210118907  Hitachi (Germany)
+    論文: 258  被引用: 7,526  国: DE  種別: company
+    直近: 2022:21  2023:20  2024:24
+    ROR: https://ror.org/027g0hb56
+    親: Hitachi (Japan) (I65143321)
+  I4210107938  Hitachi (Sweden)
+    論文: 339  被引用: 3,378  国: SE  種別: company
+    直近: 2022:46  2023:56  2024:68
+    ROR: https://ror.org/01mmh4r39
+    親: Hitachi (Japan) (I65143321)
+  I4210157168  Hitachi Engineering (Japan)
+    論文: 675  被引用: 4,688  国: JP  種別: company
+    直近: 2022:1  2024:1
+    ROR: https://ror.org/05333yg23
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+murata  |  検索: "Murata Manufacturing"  |  グループ: japan
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ⚠ 候補なし — 検索名を変えて再試行してください
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+rakuten  |  検索: "Rakuten"  |  グループ: japan
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I1301041018  Rakuten (Japan) ★推奨
+    論文: 667  被引用: 13,629  国: JP  種別: company
+    直近: 2022:76  2023:56  2024:52
+    ROR: https://ror.org/0098kke80
+    子機関: 1件
+      - Rakuten (United States) (I4210144225) [US]
+  I4210144225  Rakuten (United States)
+    論文: 71  被引用: 2,072  国: US  種別: company
+    直近: 2022:9  2023:10  2024:6
+    ROR: https://ror.org/04bsz5816
+    親: Rakuten (Japan) (I1301041018)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+google  |  検索: "Google"  |  グループ: west
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I1291425158  Google (United States) ★推奨
+    論文: 84,915  被引用: 12,114,485  国: US  種別: company
+    直近: 2022:3714  2023:3736  2024:3291
+    ROR: https://ror.org/00njsd438
+    親: Alphabet (United States) (I4210128969)
+    子機関: 7件
+      - Google (Switzerland) (I4210100430) [CH]
+      - Google (United Kingdom) (I4210113297) [GB]
+      - Google (Israel) (I4210117425) [IL]
+      - Google (Ireland) (I4210131802) [IE]
+      - Google (Canada) (I4210148186) [CA]
+      - Google (Singapore) (I4405256196) [SG]
+      - Google (Australia) (I4405261138) [AU]
+  I4210090411  Google DeepMind (United Kingdom)
+    論文: 10,629  被引用: 4,760,449  国: GB  種別: company
+    直近: 2022:272  2023:328  2024:328
+    ROR: https://ror.org/00971b260
+    親: Alphabet (United States) (I4210128969)
+  I4210113297  Google (United Kingdom)
+    論文: 1,029  被引用: 1,713,288  国: GB  種別: company
+    直近: 2022:58  2023:98  2024:144
+    ROR: https://ror.org/024bc3e07
+    親: Google (United States) (I1291425158)
+  I4210148186  Google (Canada)
+    論文: 329  被引用: 155,228  国: CA  種別: company
+    直近: 2022:29  2023:31  2024:55
+    ROR: https://ror.org/04d06q394
+    親: Google (United States) (I1291425158)
+  I4210100430  Google (Switzerland)
+    論文: 1,232  被引用: 153,451  国: CH  種別: company
+    直近: 2022:96  2023:86  2024:146
+    ROR: https://ror.org/014f9c269
+    親: Google (United States) (I1291425158)
+  I4210117425  Google (Israel)
+    論文: 431  被引用: 27,140  国: IL  種別: company
+    直近: 2022:54  2023:46  2024:44
+    ROR: https://ror.org/02c20ys54
+    親: Google (United States) (I1291425158)
+  I4210131802  Google (Ireland)
+    論文: 61  被引用: 843  国: IE  種別: company
+    直近: 2022:2  2024:1
+    ROR: https://ror.org/03nmefy27
+    親: Google (United States) (I1291425158)
+  I4405261138  Google (Australia)
+    論文: 0  被引用: 0  国: AU  種別: company
+    ROR: https://ror.org/04vssaz54
+    親: Google (United States) (I1291425158)
+  I4405256196  Google (Singapore)
+    論文: 0  被引用: 0  国: SG  種別: company
+    ROR: https://ror.org/03weg0b71
+    親: Google (United States) (I1291425158)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+amazon  |  検索: "Amazon"  |  グループ: west
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I1311688040  Amazon (United States) ★推奨
+    論文: 12,761  被引用: 366,966  国: US  種別: company
+    直近: 2022:1270  2023:1621  2024:1760
+    ROR: https://ror.org/04mv4n011
+    子機関: 2件
+      - Amazon (Germany) (I4210089985) [DE]
+      - Amazon (United Kingdom) (I4210123934) [GB]
+  I4210089985  Amazon (Germany)
+    論文: 7,523  被引用: 102,382  国: DE  種別: company
+    直近: 2022:538  2023:508  2024:394
+    ROR: https://ror.org/00b9ktm87
+    親: Amazon (United States) (I1311688040)
+  I4210098009  Amazon Research Foundation
+    論文: 2,194  被引用: 49,923  国: BR  種別: other
+    直近: 2022:139  2023:191  2024:195
+    ROR: https://ror.org/00ssgrj25
+  I4210145858  University of the Amazon
+    論文: 4,472  被引用: 24,739  国: CO  種別: education
+    直近: 2022:367  2023:513  2024:544
+    ROR: https://ror.org/03gsgk545
+  I4210095213  Amazon National University of Madre de Dios
+    論文: 1,405  被引用: 20,004  国: PE  種別: education
+    直近: 2022:267  2023:234  2024:221
+    ROR: https://ror.org/00skffm42
+  I4210123934  Amazon (United Kingdom)
+    論文: 231  被引用: 8,438  国: GB  種別: company
+    直近: 2022:32  2023:53  2024:26
+    ROR: https://ror.org/02xey9634
+    親: Amazon (United States) (I1311688040)
+  I1341025375  Amazon Conservation Association
+    論文: 3  被引用: 272  国: US  種別: nonprofit
+    ROR: https://ror.org/00d85b855
+  I4210161473  Universidad Regional Amazónica IKIAM
+    論文: 1,367  被引用: 22,994  国: EC  種別: education
+    直近: 2022:194  2023:152  2024:149
+    ROR: https://ror.org/05xedqd83
+  I4387153620  Andes Amazon Fund
+    論文: 9  被引用: 119  国: null  種別: nonprofit
+    直近: 2022:1  2023:3
+    ROR: https://ror.org/013agg827
+  I4210114107  CONAPAC
+    論文: 12  被引用: 358  国: PE  種別: nonprofit
+    直近: 2023:1  2024:1
+    ROR: https://ror.org/025nas141
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+apple  |  検索: "Apple"  |  グループ: west
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I1311269955  Apple (Israel) ★推奨
+    論文: 18,780  被引用: 4,013,115  国: IL  種別: company
+    直近: 2022:1568  2023:1475  2024:1208
+    ROR: https://ror.org/04ehjr030
+    親: Apple (United States) (I4210153776)
+  I4210153776  Apple (United States)
+    論文: 3,120  被引用: 140,027  国: US  種別: company
+    直近: 2022:174  2023:230  2024:210
+    ROR: https://ror.org/059hsda18
+    子機関: 2件
+      - Apple (Israel) (I1311269955) [IL]
+      - Apple (Germany) (I4210141230) [DE]
+  I4210141230  Apple (Germany)
+    論文: 471  被引用: 30,821  国: DE  種別: company
+    直近: 2022:39  2023:32  2024:39
+    ROR: https://ror.org/03fjbw519
+    親: Apple (United States) (I4210153776)
+  I4210107260  Apple (United Kingdom)
+    論文: 1,085  被引用: 17,921  国: GB  種別: company
+    直近: 2022:63  2023:123  2024:93
+    ROR: https://ror.org/01vpeym60
+  I4210161815  Apple University Consortium
+    論文: 36  被引用: 1,382  国: AU  種別: education
+    直近: 2023:1  2024:3
+    ROR: https://ror.org/05qm7bg11
+  I4210098308  US Apple Association
+    論文: 4  被引用: 0  国: US  種別: nonprofit
+    直近: 2024:1
+    ROR: https://ror.org/00z2zyd49
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+bosch  |  検索: "Bosch"  |  グループ: west
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I889804353  Robert Bosch (Germany) ★推奨
+    論文: 12,797  被引用: 684,862  国: DE  種別: company
+    直近: 2022:610  2023:720  2024:771
+    ROR: https://ror.org/01fe0jt45
+    子機関: 13件
+      - Robert Bosch (China) (I4210091347) [CN]
+      - Robert Bosch (France) (I4210097787) [FR]
+      - Robert Bosch (Brazil) (I4210112210) [BR]
+      - Robert Bosch (United States) (I4210120115) [US]
+      - BSH Hausgeräte (Germany) (I4210123307) [DE]
+      - Robert Bosch (Slovenia) (I4210127226) [SI]
+      - Robert Bosch (Australia) (I4210127256) [AU]
+      - Robert Bosch (United Kingdom) (I4210128710) [GB]
+      ... 他5件
+  I2802768257  Robert Bosch Hospital
+    論文: 5,019  被引用: 489,912  国: DE  種別: healthcare
+    直近: 2022:303  2023:306  2024:324
+    ROR: https://ror.org/034nkkr84
+    親: Bosch Health Campus (I4403386655)
+  I4210160169  Jeroen Bosch Ziekenhuis
+    論文: 4,283  被引用: 234,971  国: NL  種別: healthcare
+    直近: 2022:367  2023:301  2024:300
+    ROR: https://ror.org/04rr42t68
+  I4210127256  Robert Bosch (Australia)
+    論文: 2,214  被引用: 223,900  国: AU  種別: company
+    直近: 2022:17  2023:9  2024:10
+    ROR: https://ror.org/03hrns542
+    親: Robert Bosch (Germany) (I889804353)
+  I4210120009  Dr. Margarete Fischer-Bosch-Institute of Clinical Pharmacology
+    論文: 2,842  被引用: 465,933  国: DE  種別: facility
+    直近: 2022:161  2023:163  2024:128
+    ROR: https://ror.org/02pnjnj33
+    親: Bosch Health Campus (I4403386655)
+  I4210120115  Robert Bosch (United States)
+    論文: 2,423  被引用: 114,216  国: US  種別: company
+    直近: 2022:107  2023:149  2024:190
+    ROR: https://ror.org/02venad53
+    親: Robert Bosch (Germany) (I889804353)
+  I4210151956  Robert Bosch (India)
+    論文: 2,288  被引用: 40,472  国: IN  種別: company
+    直近: 2022:252  2023:245  2024:219
+    ROR: https://ror.org/04my8ty22
+    親: Robert Bosch (Germany) (I889804353)
+  I4210156055  Robert Bosch (Netherlands)
+    論文: 1,232  被引用: 31,738  国: NL  種別: company
+    直近: 2022:58  2023:83  2024:97
+    ROR: https://ror.org/057aydj06
+    親: Robert Bosch (Germany) (I889804353)
+  I4210145457  Robert Bosch (Taiwan)
+    論文: 1,246  被引用: 28,312  国: TW  種別: company
+    直近: 2022:41  2023:91  2024:107
+    ROR: https://ror.org/046as2g47
+    親: Robert Bosch (Germany) (I889804353)
+  I4210097787  Robert Bosch (France)
+    論文: 39  被引用: 27,375  国: FR  種別: company
+    直近: 2022:2  2023:1  2024:3
+    ROR: https://ror.org/00v9m1060
+    親: Robert Bosch (Germany) (I889804353)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+dassault  |  検索: "Dassault Systemes"  |  グループ: west
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ⚠ 候補なし — 検索名を変えて再試行してください
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ericsson  |  検索: "Ericsson"  |  グループ: west
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I1306339040  Ericsson (Sweden) ★推奨
+    論文: 10,507  被引用: 421,331  国: SE  種別: company
+    直近: 2022:413  2023:421  2024:459
+    ROR: https://ror.org/05a7rhx54
+    子機関: 15件
+      - Ericsson (Canada) (I4210094041) [CA]
+      - Ericsson (Norway) (I4210097953) [NO]
+      - Ericsson (Serbia) (I4210100248) [RS]
+      - Ericsson (Netherlands) (I4210105157) [NL]
+      - Ericsson (United Kingdom) (I4210114498) [GB]
+      - Ericsson (Greece) (I4210120844) [GR]
+      - Ericsson (Italy) (I4210126170) [IT]
+      - Ericsson (Hungary) (I4210131589) [HU]
+      ... 他7件
+  I4210131589  Ericsson (Hungary)
+    論文: 1,142  被引用: 58,991  国: HU  種別: company
+    直近: 2022:43  2023:98  2024:59
+    ROR: https://ror.org/03c0yyz21
+    親: Ericsson (Sweden) (I1306339040)
+  I4210139236  Ericsson (United States)
+    論文: 1,215  被引用: 36,207  国: US  種別: company
+    直近: 2022:45  2023:44  2024:64
+    ROR: https://ror.org/03q3bdj78
+    親: Ericsson (Sweden) (I1306339040)
+  I4210163994  Ericsson (Finland)
+    論文: 608  被引用: 28,683  国: FI  種別: company
+    直近: 2022:20  2023:18  2024:21
+    ROR: https://ror.org/04vv43q89
+    親: Ericsson (Sweden) (I1306339040)
+  I4210094041  Ericsson (Canada)
+    論文: 1,125  被引用: 26,918  国: CA  種別: company
+    直近: 2022:87  2023:96  2024:94
+    ROR: https://ror.org/00nas2c56
+    親: Ericsson (Sweden) (I1306339040)
+  I4210105157  Ericsson (Netherlands)
+    論文: 129  被引用: 23,880  国: NL  種別: company
+    直近: 2023:2  2024:1
+    ROR: https://ror.org/01h4rpv44
+    親: Ericsson (Sweden) (I1306339040)
+  I4210134493  Ericsson (Germany)
+    論文: 599  被引用: 21,337  国: DE  種別: company
+    直近: 2022:18  2023:23  2024:22
+    ROR: https://ror.org/03m3fa408
+    親: Ericsson (Sweden) (I1306339040)
+  I4210126170  Ericsson (Italy)
+    論文: 679  被引用: 12,342  国: IT  種別: company
+    直近: 2022:19  2023:29  2024:27
+    ROR: https://ror.org/027n3xb46
+    親: Ericsson (Sweden) (I1306339040)
+  I4210159398  Ericsson (Croatia)
+    論文: 735  被引用: 5,881  国: HR  種別: company
+    直近: 2022:27  2023:30  2024:25
+    ROR: https://ror.org/04bsh3r03
+    親: Ericsson (Sweden) (I1306339040)
+  I4210149044  Ericsson (Spain)
+    論文: 259  被引用: 2,887  国: ES  種別: company
+    直近: 2022:4  2023:11  2024:8
+    ROR: https://ror.org/04tr57w63
+    親: Ericsson (Sweden) (I1306339040)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ibm  |  検索: "IBM"  |  グループ: west
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I1341412227  IBM (United States) ★推奨
+    論文: 62,833  被引用: 5,867,730  国: US  種別: company
+    直近: 2022:711  2023:669  2024:616
+    ROR: https://ror.org/05hh8d621
+    子機関: 17件
+      - IBM (Germany) (I4210095996) [DE]
+      - IBM (Ireland) (I4210100977) [IE]
+      - IBM (France) (I4210112067) [FR]
+      - IBM (Canada) (I4210113654) [CA]
+      - IBM Research - Thomas J. Watson Research Center (I4210114115) [US]
+      - IBM (United Kingdom) (I4210121844) [GB]
+      - IBM (Italy) (I4210122524) [IT]
+      - IBM (Portugal) (I4210129932) [PT]
+      ... 他9件
+  I4210085935  IBM Research - Almaden
+    論文: 13,616  被引用: 2,330,044  国: US  種別: facility
+    直近: 2022:154  2023:130  2024:91
+    ROR: https://ror.org/005w8dd04
+    親: IBM Research - Thomas J. Watson Research Center (I4210114115)
+  I4210114115  IBM Research - Thomas J. Watson Research Center
+    論文: 35,998  被引用: 4,799,328  国: US  種別: facility
+    直近: 2022:314  2023:292  2024:248
+    ROR: https://ror.org/0265w5591
+    親: IBM (United States) (I1341412227)
+    子機関: 11件
+      - IBM Research - Almaden (I4210085935) [US]
+      - IBM Research - India (I4210103279) [IN]
+      - IBM Research - United Kingdom (I4210107896) [GB]
+      - IBM Research - Brazil (I4210113516) [BR]
+      - IBM Research - Australia (I4210120068) [AU]
+      - IBM Research - Zurich (I4210126328) [CH]
+      - IBM Research - Ireland (I4210145784) [IE]
+      - IBM Research - Tokyo (I4210145865) [JP]
+      ... 他3件
+  I4210126328  IBM Research - Zurich
+    論文: 9,862  被引用: 1,335,959  国: CH  種別: facility
+    直近: 2022:301  2023:385  2024:319
+    ROR: https://ror.org/02js37d36
+    親: IBM Research - Thomas J. Watson Research Center (I4210114115)
+  I4210167297  IBM Research - Haifa
+    論文: 3,409  被引用: 220,087  国: IL  種別: facility
+    直近: 2022:77  2023:86  2024:110
+    ROR: https://ror.org/05rw9t746
+    親: IBM Research - Thomas J. Watson Research Center (I4210114115)
+  I4210156936  IBM Research - Austin
+    論文: 2,171  被引用: 164,339  国: US  種別: facility
+    直近: 2022:19  2023:14  2024:20
+    ROR: https://ror.org/05gjbbg60
+    親: IBM Research - Thomas J. Watson Research Center (I4210114115)
+  I4210145865  IBM Research - Tokyo
+    論文: 3,484  被引用: 148,523  国: JP  種別: facility
+    直近: 2022:99  2023:111  2024:67
+    ROR: https://ror.org/04915qk43
+    親: IBM Research - Thomas J. Watson Research Center (I4210114115)
+  I4210103279  IBM Research - India
+    論文: 2,881  被引用: 108,127  国: IN  種別: facility
+    直近: 2022:87  2023:86  2024:93
+    ROR: https://ror.org/014wt7r80
+    親: IBM Research - Thomas J. Watson Research Center (I4210114115)
+  I4210126794  IBM Research (China)
+    論文: 1,929  被引用: 101,372  国: CN  種別: company
+    直近: 2022:11  2023:9  2024:22
+    ROR: https://ror.org/02yg1pf55
+    親: IBM Research - Thomas J. Watson Research Center (I4210114115)
+  I4210113654  IBM (Canada)
+    論文: 1,820  被引用: 50,843  国: CA  種別: company
+    直近: 2022:49  2023:49  2024:52
+    ROR: https://ror.org/025sxka56
+    親: IBM (United States) (I1341412227)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+intel  |  検索: "Intel"  |  グループ: west
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I1343180700  Intel (United States) ★推奨
+    論文: 33,964  被引用: 2,781,549  国: US  種別: company
+    直近: 2022:1057  2023:1301  2024:1230
+    ROR: https://ror.org/01ek73717
+    子機関: 10件
+      - Intel (Ireland) (I131781684) [IE]
+      - Intel (Germany) (I4210094487) [DE]
+      - Intel (Israel) (I4210104622) [IL]
+      - Intel (Taiwan) (I4210133876) [TW]
+      - Intel (United Arab Emirates) (I4210135487) [AE]
+      - Intel (Brazil) (I4210140447) [BR]
+      - Intel (Malaysia) (I4210142644) [MY]
+      - Intel (India) (I4210146682) [IN]
+      ... 他2件
+  I4210158342  Intel (United Kingdom)
+    論文: 5,320  被引用: 311,980  国: GB  種別: company
+    直近: 2022:208  2023:265  2024:242
+    ROR: https://ror.org/058cxws58
+    親: Intel (United States) (I1343180700)
+  I4210104622  Intel (Israel)
+    論文: 1,134  被引用: 67,060  国: IL  種別: company
+    直近: 2022:30  2023:25  2024:22
+    ROR: https://ror.org/027t2s119
+    親: Intel (United States) (I1343180700)
+  I4210094487  Intel (Germany)
+    論文: 1,575  被引用: 56,107  国: DE  種別: company
+    直近: 2022:64  2023:98  2024:77
+    ROR: https://ror.org/00m2x0g47
+    親: Intel (United States) (I1343180700)
+  I4210146682  Intel (India)
+    論文: 1,388  被引用: 33,879  国: IN  種別: company
+    直近: 2022:148  2023:134  2024:166
+    ROR: https://ror.org/04f2n1245
+    親: Intel (United States) (I1343180700)
+  I131781684  Intel (Ireland)
+    論文: 612  被引用: 23,283  国: IE  種別: company
+    直近: 2022:17  2023:25  2024:27
+    ROR: https://ror.org/02r5scg33
+    親: Intel (United States) (I1343180700)
+  I4210142644  Intel (Malaysia)
+    論文: 1,405  被引用: 21,965  国: MY  種別: company
+    直近: 2022:66  2023:80  2024:159
+    ROR: https://ror.org/048jw1p35
+    親: Intel (United States) (I1343180700)
+  I4210133876  Intel (Taiwan)
+    論文: 454  被引用: 10,881  国: TW  種別: company
+    直近: 2022:29  2023:23  2024:49
+    ROR: https://ror.org/03gezv924
+    親: Intel (United States) (I1343180700)
+  I4210140447  Intel (Brazil)
+    論文: 127  被引用: 3,608  国: BR  種別: company
+    直近: 2022:15  2023:11  2024:8
+    ROR: https://ror.org/04h3mfd12
+    親: Intel (United States) (I1343180700)
+  I4210155185  Intel (Poland)
+    論文: 136  被引用: 1,851  国: PL  種別: company
+    直近: 2022:15  2023:21  2024:12
+    ROR: https://ror.org/05bx22c71
+    親: Intel (United States) (I1343180700)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+meta  |  検索: "Meta"  |  グループ: west
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I2252078561  Meta (Israel) ★推奨
+    論文: 6,101  被引用: 1,549,255  国: IL  種別: company
+    直近: 2022:514  2023:215  2024:122
+    ROR: https://ror.org/02388em19
+    親: Meta (United States) (I4210114444)
+  I4210114444  Meta (United States)
+    論文: 4,278  被引用: 624,170  国: US  種別: company
+    直近: 2022:376  2023:311  2024:279
+    ROR: https://ror.org/01zbnvs85
+    子機関: 2件
+      - Meta (Israel) (I2252078561) [IL]
+      - Meta (United Kingdom) (I4210111288) [GB]
+  I4210128585  META Health
+    論文: 928  被引用: 53,044  国: US  種別: other
+    直近: 2022:157  2023:249  2024:215
+    ROR: https://ror.org/035h67p10
+  I4210149973  ARC Centre of Excellence for Transformative Meta-Optical Systems
+    論文: 1,325  被引用: 78,763  国: AU  種別: facility
+    直近: 2022:132  2023:156  2024:142
+    ROR: https://ror.org/05sh7tb37
+    親: Australian National University (I118347636); Australian Research Council (I1337719021)
+  I4210111288  Meta (United Kingdom)
+    論文: 379  被引用: 12,395  国: GB  種別: company
+    直近: 2022:40  2023:45  2024:40
+    ROR: https://ror.org/020ye1821
+    親: Meta (United States) (I4210114444)
+  I4210118911  META Group
+    論文: 257  被引用: 8,884  国: IT  種別: company
+    直近: 2022:13  2023:32  2024:16
+    ROR: https://ror.org/027ng0s03
+  I4210131362  Corporación Universitaria del Meta
+    論文: 1,144  被引用: 3,129  国: CO  種別: education
+    直近: 2022:42  2023:133  2024:257
+    ROR: https://ror.org/02r1xtk47
+  I4210099706  Center For Advanced Meta-Materials
+    論文: 61  被引用: 2,351  国: KR  種別: nonprofit
+    直近: 2022:5  2023:5  2024:6
+    ROR: https://ror.org/016keqt57
+  I4210120172  Meta Vision Systems (United Kingdom)
+    論文: 108  被引用: 605  国: GB  種別: company
+    直近: 2022:1  2023:1  2024:4
+    ROR: https://ror.org/03jem4j71
+  I4210158286  International Platform of Registered Systematic Review and Meta-analysis Protocols
+    論文: 45  被引用: 718  国: CH  種別: other
+    直近: 2022:8  2023:8  2024:3
+    ROR: https://ror.org/04x775f65
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+microsoft  |  検索: "Microsoft"  |  グループ: west
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I1290206253  Microsoft (United States) ★推奨
+    論文: 34,432  被引用: 4,537,575  国: US  種別: company
+    直近: 2022:1219  2023:1220  2024:1478
+    ROR: https://ror.org/00d0nc645
+    子機関: 24件
+      - LinkedIn (United States) (I1316064682) [US]
+      - Microsoft (Brazil) (I4210086099) [BR]
+      - Microsoft (Germany) (I4210087053) [DE]
+      - Microsoft (Portugal) (I4210092974) [PT]
+      - Microsoft (Denmark) (I4210099966) [DK]
+      - Microsoft (Finland) (I4210105678) [FI]
+      - Microsoft (United Kingdom) (I4210108625) [GB]
+      - Microsoft (Ireland) (I4210109507) [IE]
+      ... 他16件
+  I4210164937  Microsoft Research (United Kingdom)
+    論文: 21,924  被引用: 3,263,814  国: GB  種別: company
+    直近: 2022:1226  2023:1182  2024:1034
+    ROR: https://ror.org/05k87vq12
+    親: Microsoft (United States) (I1290206253)
+    子機関: 1件
+      - The Microsoft Research - University of Trento Centre for Computational and Systems Biology (I2802934434) [IT]
+  I4210113369  Microsoft Research Asia (China)
+    論文: 9,214  被引用: 1,879,363  国: CN  種別: company
+    直近: 2022:523  2023:529  2024:371
+    ROR: https://ror.org/0300m5276
+    親: Microsoft (United States) (I1290206253)
+  I4210124949  Microsoft Research (India)
+    論文: 2,941  被引用: 220,439  国: IN  種別: company
+    直近: 2022:138  2023:122  2024:127
+    ROR: https://ror.org/02w7f3w92
+    親: Microsoft (United States) (I1290206253)
+  I4210105678  Microsoft (Finland)
+    論文: 1,393  被引用: 146,917  国: FI  種別: company
+    直近: 2022:105  2023:101  2024:72
+    ROR: https://ror.org/01nehjf29
+    親: Microsoft (United States) (I1290206253)
+  I4210087053  Microsoft (Germany)
+    論文: 619  被引用: 37,386  国: DE  種別: company
+    直近: 2022:44  2023:77  2024:61
+    ROR: https://ror.org/001dd4s60
+    親: Microsoft (United States) (I1290206253)
+  I4210086099  Microsoft (Brazil)
+    論文: 3,164  被引用: 27,668  国: BR  種別: company
+    直近: 2022:101  2023:146  2024:130
+    ROR: https://ror.org/00hc2mf91
+    親: Microsoft (United States) (I1290206253)
+  I4400600948  Microsoft Research New England (United States)
+    論文: 867  被引用: 50,552  国: US  種別: company
+    直近: 2022:38  2023:40  2024:19
+    ROR: https://ror.org/010wkqn50
+    親: Microsoft (United States) (I1290206253)
+  I4210153468  Microsoft (Canada)
+    論文: 300  被引用: 20,331  国: CA  種別: company
+    直近: 2022:28  2023:36  2024:31
+    ROR: https://ror.org/04xhxg104
+    親: Microsoft (United States) (I1290206253)
+  I4210125051  Microsoft (Israel)
+    論文: 554  被引用: 19,391  国: IL  種別: company
+    直近: 2022:33  2023:17  2024:27
+    ROR: https://ror.org/03819cc96
+    親: Microsoft (United States) (I1290206253)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+nokia  |  検索: "Nokia"  |  グループ: west
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I72090969  Nokia (United States) ★推奨
+    論文: 18,246  被引用: 1,544,876  国: US  種別: company
+    直近: 2022:197  2023:236  2024:208
+    ROR: https://ror.org/038km2573
+    親: Nokia (Finland) (I2738502077)
+  I2738502077  Nokia (Finland)
+    論文: 9,058  被引用: 318,137  国: FI  種別: company
+    直近: 2022:155  2023:187  2024:222
+    ROR: https://ror.org/04pkc8m17
+    子機関: 15件
+      - Nokia (Canada) (I4210089774) [CA]
+      - Nokia (Spain) (I4210094645) [ES]
+      - Nokia (United Kingdom) (I4210098141) [GB]
+      - Nokia (China) (I4210099903) [CN]
+      - Nokia (Ireland) (I4210105201) [IE]
+      - Nokia (Netherlands) (I4210106018) [NL]
+      - Nokia (Norway) (I4210117316) [NO]
+      - Nokia (Portugal) (I4210123997) [PT]
+      ... 他7件
+  I4210159457  Nokia (Germany)
+    論文: 2,170  被引用: 66,809  国: DE  種別: company
+    直近: 2022:93  2023:94  2024:116
+    ROR: https://ror.org/05nh5td39
+    親: Nokia (Finland) (I2738502077)
+  I4210149358  Nokia (France)
+    論文: 1,507  被引用: 46,406  国: FR  種別: company
+    直近: 2022:120  2023:163  2024:122
+    ROR: https://ror.org/04kwfkk85
+    親: Nokia (Finland) (I2738502077)
+  I4210098141  Nokia (United Kingdom)
+    論文: 553  被引用: 48,181  国: GB  種別: company
+    直近: 2022:25  2023:38  2024:48
+    ROR: https://ror.org/00zpf0626
+    親: Nokia (Finland) (I2738502077)
+  I4210099903  Nokia (China)
+    論文: 1,148  被引用: 37,986  国: CN  種別: company
+    直近: 2022:19  2023:25  2024:29
+    ROR: https://ror.org/01607kg94
+    親: Nokia (Finland) (I2738502077)
+  I63162264  Nokia (Australia)
+    論文: 861  被引用: 33,320  国: AU  種別: company
+    直近: 2023:1
+    ROR: https://ror.org/05f2ewd15
+    親: Nokia (Finland) (I2738502077)
+  I4210106018  Nokia (Netherlands)
+    論文: 902  被引用: 32,380  国: NL  種別: company
+    直近: 2022:23  2023:30  2024:18
+    ROR: https://ror.org/01resg468
+    親: Nokia (Finland) (I2738502077)
+  I4210105201  Nokia (Ireland)
+    論文: 313  被引用: 12,302  国: IE  種別: company
+    直近: 2022:2
+    ROR: https://ror.org/01dcaj468
+    親: Nokia (Finland) (I2738502077)
+  I4210160875  Nokia (Belgium)
+    論文: 293  被引用: 9,196  国: BE  種別: company
+    直近: 2022:21  2023:35  2024:18
+    ROR: https://ror.org/04xze1462
+    親: Nokia (Finland) (I2738502077)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+nvidia  |  検索: "NVIDIA"  |  グループ: west
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I4210127875  Nvidia (United States) ★推奨
+    論文: 5,226  被引用: 372,577  国: US  種別: company
+    直近: 2022:579  2023:609  2024:642
+    ROR: https://ror.org/03jdj4y14
+    子機関: 2件
+      - Nvidia (United Kingdom) (I1304085615) [GB]
+      - NVIDIA (Italy) (I4392738274) [null]
+  I1304085615  Nvidia (United Kingdom)
+    論文: 4,434  被引用: 218,126  国: GB  種別: company
+    直近: 2022:312  2023:323  2024:332
+    ROR: https://ror.org/02kr42612
+    親: Nvidia (United States) (I4210127875)
+  I4392738274  NVIDIA (Italy)
+    論文: 0  被引用: 0  国: null  種別: company
+    ROR: https://ror.org/04z2hsy54
+    親: Nvidia (United States) (I4210127875)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+oracle  |  検索: "Oracle"  |  グループ: west
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I1342911587  Oracle (United States) ★推奨
+    論文: 6,518  被引用: 313,283  国: US  種別: company
+    直近: 2022:180  2023:183  2024:281
+    ROR: https://ror.org/006c77m33
+    子機関: 8件
+      - Oracle (Spain) (I4210086983) [ES]
+      - Oracle (Israel) (I4210089543) [IL]
+      - Oracle (United Kingdom) (I4210107681) [GB]
+      - Oracle (Germany) (I4210111203) [DE]
+      - Oracle (Canada) (I4210142715) [CA]
+      - Oracle (Belgium) (I4210142729) [BE]
+      - Oracle (India) (I4210165642) [IN]
+      - Oracle (Portugal) (I4405252810) [PT]
+  I4210107681  Oracle (United Kingdom)
+    論文: 183  被引用: 5,754  国: GB  種別: company
+    直近: 2022:13  2023:17  2024:16
+    ROR: https://ror.org/01pe8xs92
+    親: Oracle (United States) (I1342911587)
+  I4210165642  Oracle (India)
+    論文: 292  被引用: 2,373  国: IN  種別: company
+    直近: 2022:27  2023:17  2024:36
+    ROR: https://ror.org/05dd0pt55
+    親: Oracle (United States) (I1342911587)
+  I4210142715  Oracle (Canada)
+    論文: 30  被引用: 1,008  国: CA  種別: company
+    直近: 2022:2  2023:4  2024:1
+    ROR: https://ror.org/03zvsh960
+    親: Oracle (United States) (I1342911587)
+  I4210111203  Oracle (Germany)
+    論文: 116  被引用: 917  国: DE  種別: company
+    直近: 2022:2  2023:2  2024:7
+    ROR: https://ror.org/021rhh009
+    親: Oracle (United States) (I1342911587)
+  I4210142729  Oracle (Belgium)
+    論文: 55  被引用: 554  国: BE  種別: company
+    直近: 2022:3  2023:3  2024:5
+    ROR: https://ror.org/040ycw505
+    親: Oracle (United States) (I1342911587)
+  I4210086983  Oracle (Spain)
+    論文: 9  被引用: 98  国: ES  種別: company
+    直近: 2024:2
+    ROR: https://ror.org/001gmby50
+    親: Oracle (United States) (I1342911587)
+  I4210089543  Oracle (Israel)
+    論文: 8  被引用: 27  国: IL  種別: company
+    直近: 2023:3  2024:2
+    ROR: https://ror.org/0072m3y51
+    親: Oracle (United States) (I1342911587)
+  I4405252810  Oracle (Portugal)
+    論文: 0  被引用: 0  国: PT  種別: company
+    ROR: https://ror.org/00051wc04
+    親: Oracle (United States) (I1342911587)
+  I4210142094  Oracle Cancer Trust
+    論文: 1  被引用: 0  国: GB  種別: nonprofit
+    ROR: https://ror.org/04q4nwv58
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+philips  |  検索: "Philips"  |  グループ: west
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I4210122849  Philips (Netherlands) ★推奨
+    論文: 22,293  被引用: 1,663,453  国: NL  種別: company
+    直近: 2022:311  2023:294  2024:189
+    ROR: https://ror.org/02p2bgp27
+    子機関: 13件
+      - Philips (Finland) (I1329325741) [FI]
+      - Philips (United Kingdom) (I2890193189) [GB]
+      - Philips (China) (I4210086647) [CN]
+      - Philips (Spain) (I4210118413) [ES]
+      - Philips (Sweden) (I4210124052) [SE]
+      - Philips (Israel) (I4210124922) [IL]
+      - Philips (Canada) (I4210126238) [CA]
+      - Philips (United States) (I4210131230) [US]
+      ... 他5件
+  I1329325741  Philips (Finland)
+    論文: 14,234  被引用: 852,276  国: FI  種別: company
+    直近: 2022:198  2023:198  2024:440
+    ROR: https://ror.org/01g4jev56
+    親: Philips (Netherlands) (I4210122849)
+  I4210162505  Philips (Germany)
+    論文: 6,838  被引用: 471,815  国: DE  種別: company
+    直近: 2022:144  2023:159  2024:123
+    ROR: https://ror.org/05san5604
+    親: Philips (Netherlands) (I4210122849)
+  I4210131230  Philips (United States)
+    論文: 9,234  被引用: 503,036  国: US  種別: company
+    直近: 2022:295  2023:189  2024:119
+    ROR: https://ror.org/03kw6wr76
+    親: Philips (Netherlands) (I4210122849)
+  I2890193189  Philips (United Kingdom)
+    論文: 4,896  被引用: 201,560  国: GB  種別: company
+    直近: 2022:157  2023:139  2024:163
+    ROR: https://ror.org/04ktqp584
+    親: Philips (Netherlands) (I4210122849)
+  I4210165709  Philips (France)
+    論文: 1,609  被引用: 50,447  国: FR  種別: company
+    直近: 2022:27  2023:35  2024:43
+    ROR: https://ror.org/05jz46060
+    親: Philips (Netherlands) (I4210122849)
+  I4210086647  Philips (China)
+    論文: 1,644  被引用: 40,055  国: CN  種別: company
+    直近: 2022:168  2023:192  2024:183
+    ROR: https://ror.org/001tk4253
+    親: Philips (Netherlands) (I4210122849)
+  I4210133649  Philips (India)
+    論文: 1,719  被引用: 39,052  国: IN  種別: company
+    直近: 2022:69  2023:28  2024:24
+    ROR: https://ror.org/0435vfk93
+    親: Philips (Netherlands) (I4210122849)
+  I4210159858  Philips (Belgium)
+    論文: 866  被引用: 37,317  国: BE  種別: company
+    直近: 2022:5  2023:3  2024:1
+    ROR: https://ror.org/05bsjqt55
+    親: Philips (Netherlands) (I4210122849)
+  I4210118413  Philips (Spain)
+    論文: 732  被引用: 25,549  国: ES  種別: company
+    直近: 2022:20  2023:25  2024:32
+    ROR: https://ror.org/01rswjc57
+    親: Philips (Netherlands) (I4210122849)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+qualcomm  |  検索: "Qualcomm"  |  グループ: west
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I4210087596  Qualcomm (United States) ★推奨
+    論文: 5,916  被引用: 356,817  国: US  種別: company
+    直近: 2022:205  2023:189  2024:204
+    ROR: https://ror.org/002zrf773
+    子機関: 2件
+      - Qualcomm (United Kingdom) (I19268510) [GB]
+      - Qualcomm (Canada) (I4210125860) [CA]
+  I19268510  Qualcomm (United Kingdom)
+    論文: 3,587  被引用: 193,975  国: GB  種別: company
+    直近: 2022:128  2023:181  2024:180
+    ROR: https://ror.org/04d3djg48
+    親: Qualcomm (United States) (I4210087596)
+  I4210125860  Qualcomm (Canada)
+    論文: 38  被引用: 1,457  国: CA  種別: company
+    直近: 2022:1  2023:2  2024:2
+    ROR: https://ror.org/02ae31880
+    親: Qualcomm (United States) (I4210087596)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+samsung  |  検索: "Samsung"  |  グループ: west
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I2802194831  Samsung Medical Center
+    論文: 45,669  被引用: 4,315,331  国: KR  種別: healthcare
+    直近: 2022:2869  2023:3313  2024:3031
+    ROR: https://ror.org/05a15z872
+    親: Samsung (South Korea) (I2250650973)
+    子機関: 3件
+      - Kangbuk Samsung Hospital (I4210103535) [KR]
+      - Samsung Changwon Hospital (I4389425440) [KR]
+      - Samsung Seoul Hospital (I4405258492) [KR]
+  I2250650973  Samsung (South Korea) ★推奨
+    論文: 47,317  被引用: 3,495,329  国: KR  種別: company
+    直近: 2022:2039  2023:2141  2024:2183
+    ROR: https://ror.org/04w3jy968
+    子機関: 14件
+      - Samsung Medical Center (I2802194831) [KR]
+      - Samsung (United States) (I4210101778) [US]
+      - Samsung (United Kingdom) (I4210117523) [GB]
+      - Samsung (Japan) (I4210121247) [JP]
+      - Samsung (Poland) (I4210128738) [PL]
+      - Samsung (Israel) (I4210131878) [IL]
+      - Samsung (India) (I4210139030) [IN]
+      - Samsung (Switzerland) (I4210148680) [CH]
+      ... 他6件
+  I4210103535  Kangbuk Samsung Hospital
+    論文: 9,124  被引用: 532,021  国: KR  種別: healthcare
+    直近: 2022:592  2023:727  2024:640
+    ROR: https://ror.org/013e76m06
+    親: Samsung Medical Center (I2802194831)
+  I4210101778  Samsung (United States)
+    論文: 5,555  被引用: 274,748  国: US  種別: company
+    直近: 2022:232  2023:256  2024:269
+    ROR: https://ror.org/01bfbvm65
+    親: Samsung (South Korea) (I2250650973)
+    子機関: 1件
+      - Harman (United States) (I4210131281) [US]
+  I4210139030  Samsung (India)
+    論文: 2,281  被引用: 49,003  国: IN  種別: company
+    直近: 2022:174  2023:162  2024:182
+    ROR: https://ror.org/04cpx2569
+    親: Samsung (South Korea) (I2250650973)
+  I4210117523  Samsung (United Kingdom)
+    論文: 1,253  被引用: 52,925  国: GB  種別: company
+    直近: 2022:72  2023:84  2024:61
+    ROR: https://ror.org/01w6gjq94
+    親: Samsung (South Korea) (I2250650973)
+  I4210155230  Samsung (China)
+    論文: 649  被引用: 37,795  国: CN  種別: company
+    直近: 2022:45  2023:58  2024:49
+    ROR: https://ror.org/04yt00889
+    親: Samsung (South Korea) (I2250650973)
+  I4210121247  Samsung (Japan)
+    論文: 376  被引用: 32,203  国: JP  種別: company
+    直近: 2022:16  2023:9  2024:13
+    ROR: https://ror.org/01x29j481
+    親: Samsung (South Korea) (I2250650973)
+  I4210141363  Samsung (Russia)
+    論文: 391  被引用: 20,543  国: RU  種別: company
+    直近: 2022:42  2023:21  2024:7
+    ROR: https://ror.org/051an6p98
+  I4387155180  Samsung SDS (South Korea)
+    論文: 457  被引用: 18,541  国: null  種別: company
+    直近: 2022:25  2023:32  2024:20
+    ROR: https://ror.org/0476bn305
+    親: Samsung (South Korea) (I2250650973)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+sap  |  検索: "SAP"  |  グループ: west
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I4210132444  Systems, Applications & Products in Data Processing (Germany) ★推奨
+    論文: 2,114  被引用: 61,707  国: DE  種別: company
+    直近: 2022:110  2023:126  2024:91
+    ROR: https://ror.org/03dsc8d33
+    子機関: 6件
+      - Systems, Applications & Products in Data Processing (United States) (I4210113521) [US]
+      - Systems, Applications & Products in Data Processing (Canada) (I4210117871) [CA]
+      - Systems, Applications & Products in Data Processing (Switzerland) (I4210125512) [CH]
+      - Systems, Applications & Products in Data Processing (United Kingdom) (I4210133614) [GB]
+      - Systems, Applications, and Products in Data Processing (Russia) (I4210134398) [RU]
+      - Systems, Applications & Products in Data Processing (Australia) (I4210153599) [AU]
+  I4210133614  Systems, Applications & Products in Data Processing (United Kingdom)
+    論文: 1,612  被引用: 29,053  国: GB  種別: company
+    直近: 2022:68  2023:70  2024:84
+    ROR: https://ror.org/04k7gd586
+    親: Systems, Applications & Products in Data Processing (Germany) (I4210132444)
+  I4210117871  Systems, Applications & Products in Data Processing (Canada)
+    論文: 860  被引用: 14,017  国: CA  種別: company
+    直近: 2022:51  2023:67  2024:36
+    ROR: https://ror.org/025jhd967
+    親: Systems, Applications & Products in Data Processing (Germany) (I4210132444)
+  I4210125512  Systems, Applications & Products in Data Processing (Switzerland)
+    論文: 518  被引用: 11,833  国: CH  種別: company
+    直近: 2022:6  2023:14  2024:14
+    ROR: https://ror.org/036z4j470
+    親: Systems, Applications & Products in Data Processing (Germany) (I4210132444)
+  I4210113521  Systems, Applications & Products in Data Processing (United States)
+    論文: 342  被引用: 8,980  国: US  種別: company
+    直近: 2022:14  2023:9  2024:8
+    ROR: https://ror.org/01gbhv690
+    親: Systems, Applications & Products in Data Processing (Germany) (I4210132444)
+  I4210143246  Society of Analytical Psychology
+    論文: 743  被引用: 7,969  国: GB  種別: other
+    直近: 2022:21  2023:22  2024:21
+    ROR: https://ror.org/056ezyb19
+  I4210153599  Systems, Applications & Products in Data Processing (Australia)
+    論文: 158  被引用: 4,381  国: AU  種別: company
+    直近: 2022:5  2023:2  2024:9
+    ROR: https://ror.org/04c2m5174
+    親: Systems, Applications & Products in Data Processing (Germany) (I4210132444)
+  I4210134398  Systems, Applications, and Products in Data Processing (Russia)
+    論文: 14  被引用: 304  国: RU  種別: company
+    直近: 2023:2
+    ROR: https://ror.org/02xsf1j07
+    親: Systems, Applications & Products in Data Processing (Germany) (I4210132444)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+siemens  |  検索: "Siemens"  |  グループ: west
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I1325886976  Siemens (Germany) ★推奨
+    論文: 38,402  被引用: 1,432,182  国: DE  種別: company
+    直近: 2022:789  2023:942  2024:902
+    ROR: https://ror.org/059mq0909
+    子機関: 27件
+      - Siemens (Hungary) (I105695857) [HU]
+      - Siemens (Canada) (I2801914806) [CA]
+      - Siemens (Czechia) (I4210086663) [CZ]
+      - Siemens (Brazil) (I4210087776) [BR]
+      - Siemens (Norway) (I4210091229) [NO]
+      - Siemens (Romania) (I4210095246) [RO]
+      - Siemens (Portugal) (I4210105016) [PT]
+      - Siemens (United Kingdom) (I4210114920) [GB]
+      ... 他19件
+  I4210137693  Siemens (United States)
+    論文: 7,123  被引用: 400,892  国: US  種別: company
+    直近: 2022:266  2023:231  2024:278
+    ROR: https://ror.org/04axb7e79
+    親: Siemens (Germany) (I1325886976)
+  I4210153902  Siemens Healthineers (Germany)
+    論文: 6,351  被引用: 341,777  国: DE  種別: company
+    直近: 2022:455  2023:426  2024:502
+    ROR: https://ror.org/0449c4c15
+  I4210151799  Siemens Healthcare (United States)
+    論文: 5,747  被引用: 248,319  国: US  種別: company
+    直近: 2022:312  2023:396  2024:506
+    ROR: https://ror.org/054962n91
+  I51629411  Siemens (China)
+    論文: 2,270  被引用: 47,991  国: CN  種別: company
+    直近: 2022:234  2023:255  2024:253
+    ROR: https://ror.org/00v6g9845
+    親: Siemens (Germany) (I1325886976)
+  I4210127033  Siemens (Austria)
+    論文: 1,737  被引用: 45,700  国: AT  種別: company
+    直近: 2022:58  2023:66  2024:51
+    ROR: https://ror.org/03794w632
+    親: Siemens (Germany) (I1325886976)
+  I105695857  Siemens (Hungary)
+    論文: 1,637  被引用: 38,905  国: HU  種別: company
+    直近: 2022:36  2023:22  2024:15
+    ROR: https://ror.org/01rk7mv85
+    親: Siemens (Germany) (I1325886976)
+  I4210160616  Siemens (Switzerland)
+    論文: 608  被引用: 29,028  国: CH  種別: company
+    直近: 2022:53  2023:65  2024:61
+    ROR: https://ror.org/056egm241
+    親: Siemens (Germany) (I1325886976)
+  I4210114920  Siemens (United Kingdom)
+    論文: 1,417  被引用: 34,870  国: GB  種別: company
+    直近: 2022:67  2023:77  2024:105
+    ROR: https://ror.org/0287e5797
+    親: Siemens (Germany) (I1325886976)
+  I4210126633  Siemens (Denmark)
+    論文: 601  被引用: 21,952  国: DK  種別: company
+    直近: 2022:41  2023:51  2024:61
+    ROR: https://ror.org/031gmvg29
+    親: Siemens (Germany) (I1325886976)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+tesla  |  検索: "Tesla"  |  グループ: west
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I4210108413  TESLA (Czechia)
+    論文: 153  被引用: 34,724  国: CZ  種別: company
+    直近: 2022:2  2023:3  2024:5
+    ROR: https://ror.org/020czch62
+  I4210120853  Univerzitet Union Nikola Tesla
+    論文: 3,125  被引用: 18,979  国: RS  種別: education
+    直近: 2022:254  2023:325  2024:256
+    ROR: https://ror.org/02kgjn162
+  I4210109380  Tesla (United States)
+    論文: 438  被引用: 10,644  国: US  種別: company
+    直近: 2022:29  2023:39  2024:41
+    ROR: https://ror.org/02kpcqm42
+  I4210147494  Tesla Engineering (United Kingdom)
+    論文: 59  被引用: 343  国: GB  種別: company
+    直近: 2022:4  2023:6  2024:2
+    ROR: https://ror.org/05gzs4q18
+  I4210127359  Veleučilište "Nikola Tesla" u Gospiću
+    論文: 99  被引用: 203  国: HR  種別: education
+    直近: 2022:9  2023:5  2024:3
+    ROR: https://ror.org/02b61re56
+  I4210159398  Ericsson (Croatia) ★推奨
+    論文: 735  被引用: 5,881  国: HR  種別: company
+    直近: 2022:27  2023:30  2024:25
+    ROR: https://ror.org/04bsh3r03
+    親: Ericsson (Sweden) (I1306339040)
+  I4210091944  Tesla Blatna (Czechia)
+    論文: 25  被引用: 71  国: CZ  種別: company
+    直近: 2022:5  2023:1  2024:8
+    ROR: https://ror.org/00kvxyg87
+  I4210122996  Tesla Laboratories (United States)
+    論文: 12  被引用: 70  国: US  種別: company
+    ROR: https://ror.org/02txken21
+  I4388482647  The Nikola Tesla Institute of Electrical Engineering
+    論文: 162  被引用: 79  国: null  種別: facility
+    直近: 2022:11  2023:20  2024:2
+    ROR: https://ror.org/04gvjds60
+    親: University of Belgrade (I4068193)
+  I4210121336  TESLA Electrontubes (Czechia)
+    論文: 0  被引用: 0  国: CZ  種別: company
+    ROR: https://ror.org/030jevs33
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+tsmc  |  検索: "TSMC"  |  グループ: west
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  I4210120917  Taiwan Semiconductor Manufacturing Company (Taiwan) ★推奨
+    論文: 5,143  被引用: 322,519  国: TW  種別: company
+    直近: 2022:242  2023:283  2024:316
+    ROR: https://ror.org/02wx79d08
+    子機関: 2件
+      - Taiwan Semiconductor Manufacturing Company (United States) (I1334877674) [US]
+      - Taiwan Semiconductor Manufacturing Company (China) (I4210119559) [CN]
+  I1334877674  Taiwan Semiconductor Manufacturing Company (United States)
+    論文: 867  被引用: 43,365  国: US  種別: company
+    直近: 2022:29  2023:37  2024:37
+    ROR: https://ror.org/02rvfjx92
+    親: Taiwan Semiconductor Manufacturing Company (Taiwan) (I4210120917)
+  I4210119559  Taiwan Semiconductor Manufacturing Company (China)
+    論文: 870  被引用: 15,971  国: CN  種別: company
+    直近: 2022:41  2023:56  2024:102
+    ROR: https://ror.org/02s0wcj29
+    親: Taiwan Semiconductor Manufacturing Company (Taiwan) (I4210120917)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+=== サマリ ===
+全80社
+  候補なし: 8社  → esteelauder, haleon, kose, lghh, polaorbis, catl, murata, dassault
+  company型が複数: 52社(名寄せ要確認)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
