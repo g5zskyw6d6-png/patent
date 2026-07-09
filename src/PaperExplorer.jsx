@@ -105,17 +105,26 @@ export default function PaperExplorer({ supabaseUrl, supabaseKey, claudeApiKey, 
       if(titleJa||abstractJa){
         const patch={}; if(titleJa) patch.title_ja=titleJa; if(abstractJa) patch.abstract_ja=abstractJa;
         try{
+          console.log("🔍 DB保存開始:", {openalex_id: paper.openalex_id, patch});
           const saveRes=await fetch(`${supabaseUrl}/rest/v1/works?openalex_id=eq.${paper.openalex_id}`,{
             method:"PATCH",
-            headers:{apikey:supabaseKey,Authorization:`Bearer ${supabaseKey}`,"Content-Type":"application/json",Prefer:"return=minimal","Content-Profile":"openalex"},
+            headers:{apikey:supabaseKey,Authorization:`Bearer ${supabaseKey}`,"Content-Type":"application/json","Prefer":"return=representation","Content-Profile":"openalex"},
             body:JSON.stringify(patch)
           });
+          const saveBody=await saveRes.text();
+          console.log("📤 DB保存レスポンス:", {status: saveRes.status, body: saveBody});
+
           if(saveRes.ok){
-            setErr("✅ AI解説をDBに保存しました");
+            const updated=JSON.parse(saveBody);
+            if(Array.isArray(updated)&&updated.length>0){
+              setErr("✅ AI解説をDBに保存しました ("+updated.length+"行更新)");
+            } else {
+              setErr("⚠️ 更新対象がありません。openalex_id を確認してください");
+              console.warn("更新されなかった。openalex_id:", paper.openalex_id);
+            }
           } else {
-            const errText=await saveRes.text().catch(()=>"");
-            setErr("⚠️ DB保存失敗 ("+saveRes.status+"): "+errText.slice(0,100));
-            console.error("DB保存失敗:", saveRes.status, errText);
+            setErr("⚠️ DB保存失敗 ("+saveRes.status+"): "+saveBody.slice(0,150));
+            console.error("DB保存失敗:", saveRes.status, saveBody);
           }
         }catch(saveErr){
           setErr("⚠️ DB保存エラー: "+saveErr.message);
