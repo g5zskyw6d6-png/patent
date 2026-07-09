@@ -2256,6 +2256,7 @@ function KeywordsTab({ sbGet, claudePost, companies, supabaseUrl, supabaseKey, c
           sOffset += PAGE;
           await new Promise(r => setTimeout(r, 200));
         }
+      }
 
       if (!allData || allData.length === 0) {
         setErr("特許データがありません。");
