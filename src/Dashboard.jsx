@@ -466,7 +466,6 @@ useEffect(() => {
   const TABS = [
     { id:"search",   label:"🔍 検索・閲覧" },
     { id:"analyze",  label:"🤖 AI分析" },
-    { id:"summaries",label:"✨ AI解説生成" },
     { id:"manage",   label:"⚙️ 企業管理" },
     { id:"keywords",  label:"🏷️ キーワード" },
     { id:"tech",     label:"🧭 技術ポートフォリオ" },
@@ -498,7 +497,6 @@ useEffect(() => {
       {tab === "search"    && <SearchOrPaper sbRpc={sbRpc} fetchDescription={fetchDescription} fetchClaims={fetchClaims} claudePost={claudePost} sbPost={sbPost} sbUpsert={sbUpsert} sbSaveAnalysis={sbSaveAnalysis} supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} claudeApiKey={claudeApiKey} companies={companiesWithStats} c={c} card={card}/>}
       {tab === "analyze"   && <AnalyzeTab   sbGet={sbGet} supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} companies={companies} c={c} card={card}/>}
 
-      {tab === "summaries" && <SummariesTab sbGet={sbGet} sbUpsert={sbUpsert} claudePost={claudePost} companies={companies} supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} c={c} card={card}/>}
       {tab === "manage"    && <ManageTab    supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} companies={companies} onRefresh={onClose} c={c} card={card}/>}
       {tab === "keywords"  && <KeywordsTab  sbGet={sbGet} claudePost={claudePost} companies={companies} supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} c={c} card={card}/>}
       {tab === "tech"      && <TechPortfolio supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} c={c} card={card}/>}
@@ -662,6 +660,133 @@ const [claimsFetchPhase, setClaimsFetchPhase] = useState("idle");
       setErr("一括取得エラー: "+e.message);
     }
     setClaimsFetchPhase("idle");
+  };
+
+  /* ★ 絞り込み結果の特許を一括AI解説（旧「AI解説生成」タブの機能を統合） */
+  const [sumPhase,    setSumPhase]    = useState("idle"); // idle | fetching | generating
+  const [sumProgress, setSumProgress] = useState({ done:0, total:0, saved:0 });
+  const sumStop = useRef(false);
+
+  const generateSummaries = async () => {
+    if (!window.confirm(
+      "絞り込み結果 "+totalCount+" 件の特許のAI解説（日本語タイトル＋要約）を一括生成してDBに保存します。\n\n"+
+      "※ 解説が生成済みの特許はスキップします。\n"+
+      "※ Claude APIを使用します。\n"+
+      "続けますか？"
+    )) return;
+
+    setSumPhase("fetching");
+    setSumProgress({ done:0, total:0, saved:0 });
+    sumStop.current = false;
+
+    try {
+      // 絞り込み条件に合致する全件をページネーション取得
+      const allPatents = [];
+      let offset = 0;
+      const PAGE = 1000;
+      while (true) {
+        const batch = await sbRpc("search_patents", {
+          keyword:     keyword.trim()||null,
+          inventor:    inventor.trim()||null,
+          company_ids: selCompanies.length>0?selCompanies:null,
+          countries:   selCountries.length>0?selCountries:null,
+          from_date:   dateFrom||null,
+          to_date:     dateTo||null,
+          page_offset: offset,
+          page_limit:  PAGE,
+        });
+        if (!batch || batch.length === 0) break;
+        allPatents.push(...batch);
+        if (batch.length < PAGE) break;
+        offset += PAGE;
+        await new Promise(r => setTimeout(r, 200));
+      }
+
+      // AI解説が未生成のものだけに絞る（summary_ja が無いもの）
+      const targets = allPatents.filter(p => !p.summary_ja);
+      if (targets.length === 0) {
+        setErr("すべての特許にAI解説が生成済みです。");
+        setSumPhase("idle"); return;
+      }
+
+      setSumPhase("generating");
+      setSumProgress({ done:0, total:targets.length, saved:0 });
+      const BATCH = 3;
+      let savedCount = 0;
+
+      for (let i = 0; i < targets.length; i += BATCH) {
+        if (sumStop.current) break;
+        const batch = targets.slice(i, i + BATCH);
+        const list  = batch.map((p, idx) => {
+          let e = (idx+1)+". ["+p.patent_number+"] "+p.title_en;
+          if (p.abstract_epo) e += " / "+p.abstract_epo.slice(0, 100);
+          return e;
+        }).join("\n");
+
+        try {
+          const text = await claudePost(
+            "You are a patent analyst. Analyze each patent below.\n\n"
+            +"IMPORTANT: In NUM: field, use the EXACT patent number from [brackets], NOT the list number 1/2/3.\n\n"
+            +"Reply ONLY (one line per patent):\n"
+            +"NUM:<exact patent number from [brackets]>|Japanese title|4-5 sentence Japanese summary\n\n"
+            + list, 1500);
+
+          const batchResults = {};
+          const numMap = {};
+          batch.forEach(p => {
+            numMap[p.patent_number] = p.patent_number;
+            numMap[p.patent_number.replace(/\s/g,"").toUpperCase()] = p.patent_number;
+          });
+          text.split("\n").forEach(line => {
+            if (!line.startsWith("NUM:")) return;
+            const body = line.slice(4), f = body.indexOf("|"), s = body.indexOf("|", f+1);
+            if (f < 0 || s < 0) return;
+            const rawNum  = body.slice(0,f).trim();
+            const jaTitle = body.slice(f+1,s).trim();
+            const summary = body.slice(s+1).trim();
+            const exactNum = numMap[rawNum]
+              || numMap[rawNum.replace(/\s/g,"").toUpperCase()]
+              || batch.find(p => p.patent_number.includes(rawNum) || rawNum.includes(p.patent_number))?.patent_number;
+            if (exactNum && summary) batchResults[exactNum] = { jaTitle, summary };
+          });
+
+          // ai_summaries へ保存
+          const rows = Object.entries(batchResults).map(([num, v]) => ({
+            patent_number: num, title_ja: v.jaTitle||null, summary_ja: v.summary, analyzed_at: new Date().toISOString(),
+          }));
+          if (rows.length > 0) {
+            await sbUpsert("ai_summaries", rows, "patent_number");
+            savedCount += rows.length;
+          }
+
+          // patents.title_ja にも反映
+          for (const [num, v] of Object.entries(batchResults)) {
+            if (v.jaTitle) {
+              fetch(supabaseUrl+"/rest/v1/patents?patent_number=eq."+encodeURIComponent(num), {
+                method:"PATCH",
+                headers:{"apikey":supabaseKey,"Authorization":"Bearer "+supabaseKey,"Content-Type":"application/json","Prefer":"return=minimal"},
+                body:JSON.stringify({title_ja:v.jaTitle})
+              }).catch(e => console.warn("title_ja patch failed:", num, e));
+            }
+          }
+
+          // 画面上の検索結果にも反映
+          setResults(prev => prev.map(p => batchResults[p.patent_number]
+            ? { ...p, title_ja: batchResults[p.patent_number].jaTitle||p.title_ja, summary_ja: batchResults[p.patent_number].summary }
+            : p));
+        } catch(e) {
+          console.warn("summary batch failed:", e.message);
+        }
+
+        setSumProgress({ done:Math.min(i+BATCH, targets.length), total:targets.length, saved:savedCount });
+        if (i + BATCH < targets.length) await new Promise(r => setTimeout(r, 1500));
+      }
+
+      setErr("✅ AI解説の一括生成完了（"+savedCount+"/"+targets.length+"件 保存）");
+    } catch(e) {
+      setErr("AI解説一括生成エラー: "+e.message);
+    }
+    setSumPhase("idle");
   };
 
   const doAnalyzeResults = async (deep = false) => {
@@ -1014,6 +1139,30 @@ const [claimsFetchPhase, setClaimsFetchPhase] = useState("idle");
                 transition:"width .3s"}}/>
             </div>
             <button onClick={()=>claimsFetchStop.current=true}
+              style={{width:"100%",padding:"4px",borderRadius:5,border:"1px solid "+c.border,background:"transparent",color:c.amber,fontSize:10,cursor:"pointer",marginBottom:4}}>
+              ⏹ 停止
+            </button>
+          </>
+        )}
+
+        {/* ★ 絞り込み結果を一括AI解説 */}
+        <button onClick={generateSummaries}
+          disabled={!results.length||sumPhase!=="idle"}
+          style={{width:"100%",padding:"8px",borderRadius:7,border:"1px solid "+(results.length&&sumPhase==="idle"?"#e879f9":c.border),background:"transparent",color:results.length&&sumPhase==="idle"?"#e879f9":c.muted,fontSize:11,cursor:results.length&&sumPhase==="idle"?"pointer":"not-allowed",marginBottom:6}}>
+          {sumPhase==="fetching"
+            ? "✨ 対象特許を取得中..."
+            : sumPhase==="generating"
+              ? "✨ "+sumProgress.done+"/"+sumProgress.total+"件生成中（保存:"+sumProgress.saved+"件）"
+              : "✨ AI解説を一括生成してDB保存"}
+        </button>
+        {sumPhase==="generating" && (
+          <>
+            <div style={{height:4,background:c.bg2,borderRadius:2,overflow:"hidden",marginBottom:4}}>
+              <div style={{height:"100%",borderRadius:2,background:"linear-gradient(90deg,#e879f9,#a78bfa)",
+                width:sumProgress.total>0?(sumProgress.done/sumProgress.total*100)+"%":"0%",
+                transition:"width .3s"}}/>
+            </div>
+            <button onClick={()=>sumStop.current=true}
               style={{width:"100%",padding:"4px",borderRadius:5,border:"1px solid "+c.border,background:"transparent",color:c.amber,fontSize:10,cursor:"pointer",marginBottom:4}}>
               ⏹ 停止
             </button>
@@ -1794,275 +1943,6 @@ function AnalyzeTab({ sbGet, supabaseUrl, supabaseKey, companies, c, card }) {
   );
 }
 
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   ✨ AI解説生成タブ（バッチ処理 — DBデータを使用）
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-function SummariesTab({ sbGet, sbUpsert, claudePost, companies, supabaseUrl, supabaseKey, c, card }) {
-  const [summaryKind, setSummaryKind] = useState("patent");  // "patent" | "paper"
-  const [selCompany, setSelCompany] = useState(null);
-  const [paperKeyword, setPaperKeyword] = useState("");
-  const [dateFrom,   setDateFrom]   = useState("2024-01-01");
-  const [dateTo,     setDateTo]     = useState("2026-03-31");
-  const [onlyNew,    setOnlyNew]    = useState(true);
-  const [phase,      setPhase]      = useState("idle");
-  const [progress,   setProgress]   = useState({ done:0, total:0 });
-  const [results,    setResults]    = useState({});
-  const [err,        setErr]        = useState("");
-  const stopRef = useRef(false);
-
-  const doGenerate = async () => {
-    if (summaryKind === "patent" && !selCompany) return;
-    if (summaryKind === "paper" && !paperKeyword) return;
-
-    setPhase("loading"); setErr(""); setResults({}); stopRef.current = false;
-
-    try {
-      let targets = [];
-
-      if (summaryKind === "patent") {
-        // ★ 特許処理
-        const url = "patents?company_id=eq."+selCompany.id+"&publication_date=gte."+dateFrom+"&publication_date=lte."+dateTo+"&select=patent_number,title_en,abstract_epo,country,inventors&limit=2000";
-        const allPatents = await sbGet(url);
-        if (!allPatents || allPatents.length === 0) { setErr("DBに該当する特許がありません。"); setPhase("idle"); return; }
-
-        // 既に解説があるものを除外（オプション）
-        targets = allPatents;
-        if (onlyNew) {
-          const existingNums = await sbGet("ai_summaries?patent_number=in.("+allPatents.map(p=>p.patent_number).join(",")+")&select=patent_number");
-          const existingSet  = new Set((existingNums||[]).map(r=>r.patent_number));
-          targets = allPatents.filter(p => !existingSet.has(p.patent_number));
-        }
-
-        if (targets.length === 0) { setErr("すべての特許に解説が生成済みです。「未生成のみ」のチェックを外すと再生成できます。"); setPhase("idle"); return; }
-      } else {
-        // ★ 論文処理 — Vercel proxy API 経由で OpenAlex から取得
-        const response = await fetch("/api/openAlex/search", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            keyword: paperKeyword,
-            sortBy: "cited_by_count",
-            limit: 100,
-            offset: 0,
-          }),
-        });
-
-        if (!response.ok) {
-          setErr("論文検索に失敗しました: "+response.status);
-          setPhase("idle");
-          return;
-        }
-
-        const data = await response.json();
-        if (!data.results || data.results.length === 0) {
-          setErr("検索条件に合致する論文が見つかりません。");
-          setPhase("idle");
-          return;
-        }
-
-        targets = data.results;
-
-        // 既に生成済みの論文を除外（オプション）
-        if (onlyNew) {
-          const existingIds = await sbGet("paper_summaries?openalex_id=in.("+targets.map(p=>p.openalex_id).join(",")+")&select=openalex_id");
-          const existingSet = new Set((existingIds||[]).map(r=>r.openalex_id));
-          targets = targets.filter(p => !existingSet.has(p.openalex_id));
-        }
-
-        if (targets.length === 0) {
-          setErr("すべての論文に解説が生成済みです。「未生成のみ」のチェックを外すと再生成できます。");
-          setPhase("idle");
-          return;
-        }
-      }
-
-      setPhase("generating");
-      setProgress({ done:0, total:targets.length });
-      const BATCH = 3;
-      let allResults = {};
-
-      for (let i = 0; i < targets.length; i += BATCH) {
-        if (stopRef.current) break;
-        const batch = targets.slice(i, i + BATCH);
-
-        if (summaryKind === "patent") {
-          // ★ 特許の場合
-          const list  = batch.map((p, idx) => {
-            let e = (idx+1)+". ["+p.patent_number+"] "+p.title_en;
-            if (p.abstract_epo) e += " / "+p.abstract_epo.slice(0, 100);
-            return e;
-          }).join("\n");
-
-          const text = await claudePost(
-            "You are a patent analyst. Analyze each patent below.\n\n" + "IMPORTANT: In NUM: field, use the EXACT patent number from [brackets], NOT the list number 1/2/3.\n\n" + "Reply ONLY (one line per patent):\n" + "NUM:<exact patent number from [brackets]>|Japanese title|4-5 sentence Japanese summary\n\n" + list
-            , 1500);
-
-          const batchResults = {};
-          const numMap = {};
-          batch.forEach(p => {
-            numMap[p.patent_number] = p.patent_number;
-            numMap[p.patent_number.replace(/\s/g,"").toUpperCase()] = p.patent_number;
-          });
-          text.split("\n").forEach(line => {
-            if (!line.startsWith("NUM:")) return;
-            const body = line.slice(4), f = body.indexOf("|"), s = body.indexOf("|", f+1);
-            if (f < 0 || s < 0) return;
-            const rawNum  = body.slice(0,f).trim();
-            const jaTitle = body.slice(f+1,s).trim();
-            const summary = body.slice(s+1).trim();
-            const exactNum = numMap[rawNum]
-              || numMap[rawNum.replace(/\s/g,"").toUpperCase()]
-              || batch.find(p => p.patent_number.includes(rawNum) || rawNum.includes(p.patent_number))?.patent_number;
-            if (exactNum && summary) batchResults[exactNum] = { jaTitle, summary };
-          });
-
-          const rows = Object.entries(batchResults).map(([num, v]) => ({ patent_number:num, title_ja:v.jaTitle||null, summary_ja:v.summary, analyzed_at:new Date().toISOString() }));
-          if (rows.length > 0) await sbUpsert("ai_summaries", rows, "patent_number");
-
-          for (const [num, v] of Object.entries(batchResults)) {
-            if (v.jaTitle) {
-              fetch(supabaseUrl+"/rest/v1/patents?patent_number=eq."+encodeURIComponent(num), {
-                method:"PATCH",
-                headers:{"apikey":supabaseKey,"Authorization":"Bearer "+supabaseKey,"Content-Type":"application/json","Prefer":"return=minimal"},
-                body:JSON.stringify({title_ja:v.jaTitle})
-              }).catch(e => console.warn("title_ja patch failed:", num, e));
-            }
-          }
-
-          allResults = { ...allResults, ...batchResults };
-        } else {
-          // ★ 論文の場合
-          const list = batch.map((p, idx) => {
-            let e = (idx+1)+". ["+p.openalex_id+"] "+p.title;
-            if (p.abstract_text) e += " / "+p.abstract_text.slice(0, 100);
-            return e;
-          }).join("\n");
-
-          const text = await claudePost(
-            "You are an academic paper analyst. Analyze each paper below in Japanese.\n\n" + "IMPORTANT: In NUM: field, use the EXACT OpenAlex ID from [brackets], NOT the list number 1/2/3.\n\n" + "Reply ONLY (one line per paper):\n" + "NUM:<exact openalex_id from [brackets]>|Japanese title|4-5 sentence Japanese summary\n\n" + list
-            , 1500);
-
-          const batchResults = {};
-          const idMap = {};
-          batch.forEach(p => {
-            idMap[p.openalex_id] = p.openalex_id;
-            idMap[p.openalex_id.replace(/\s/g,"").toUpperCase()] = p.openalex_id;
-          });
-          text.split("\n").forEach(line => {
-            if (!line.startsWith("NUM:")) return;
-            const body = line.slice(4), f = body.indexOf("|"), s = body.indexOf("|", f+1);
-            if (f < 0 || s < 0) return;
-            const rawId   = body.slice(0,f).trim();
-            const jaTitle = body.slice(f+1,s).trim();
-            const summary = body.slice(s+1).trim();
-            const exactId = idMap[rawId]
-              || idMap[rawId.replace(/\s/g,"").toUpperCase()]
-              || batch.find(p => p.openalex_id.includes(rawId) || rawId.includes(p.openalex_id))?.openalex_id;
-            if (exactId && summary) batchResults[exactId] = { jaTitle, summary };
-          });
-
-          const rows = Object.entries(batchResults).map(([id, v]) => ({ openalex_id:id, title_ja:v.jaTitle||null, abstract_ja:v.summary, updated_at:new Date().toISOString() }));
-          if (rows.length > 0) await sbUpsert("paper_summaries", rows, "openalex_id");
-
-          allResults = { ...allResults, ...batchResults };
-        }
-
-        setResults({ ...allResults });
-        setProgress({ done:Math.min(i+BATCH, targets.length), total:targets.length });
-        if (i + BATCH < targets.length) await new Promise(r => setTimeout(r, 1500));
-      }
-      setPhase("done");
-    } catch(e) { setErr("エラー: "+e.message); setPhase("idle"); }
-  };
-
-  const downloadCSV = () => {
-    if (!Object.keys(results).length) return;
-    const header = summaryKind === "patent" ? "特許番号,日本語タイトル,AI解説" : "OpenAlex ID,日本語タイトル,AI解説";
-    const rows   = Object.entries(results).map(([id,v]) => [id,'"'+(v.jaTitle||"").replace(/"/g,'""')+'"','"'+(v.summary||"").replace(/"/g,'""')+'"'].join(","));
-    const filename = "ai_summaries.csv";
-    const blob   = new Blob(["\uFEFF",[header,...rows].join("\n")],{type:"text/csv;charset=utf-8;"});
-    const link   = document.createElement("a"); link.href=URL.createObjectURL(blob); link.download=filename; link.click();
-  };
-
-  return (
-    <div style={{flex:1,overflowY:"auto",padding:16}}>
-      {/* コントロール */}
-      <div style={{...card,marginBottom:16}}>
-        <div style={{fontSize:12,fontWeight:700,color:c.purple,marginBottom:4}}>✨ AI解説生成</div>
-        <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:12}}>
-          <label style={{display:"flex",alignItems:"center",gap:6,fontSize:11,cursor:"pointer"}}>
-            <input type="radio" name="summaryKind" value="patent" checked={summaryKind==="patent"} onChange={()=>{setSummaryKind("patent");setSelCompany(null);}}/>
-            <span style={{color:c.text}}>特許</span>
-          </label>
-          <label style={{display:"flex",alignItems:"center",gap:6,fontSize:11,cursor:"pointer"}}>
-            <input type="radio" name="summaryKind" value="paper" checked={summaryKind==="paper"} onChange={()=>{setSummaryKind("paper");setPaperKeyword("");}}/>
-            <span style={{color:c.text}}>論文</span>
-          </label>
-        </div>
-        <div style={{display:"flex",flexWrap:"wrap",gap:8,alignItems:"center",marginBottom:12}}>
-          {summaryKind === "patent" && (
-            <select value={selCompany?.id||""} onChange={e => setSelCompany(companies.find(c=>c.id===e.target.value)||null)}
-              style={{padding:"6px 10px",borderRadius:6,border:"1px solid "+c.border,background:c.bg2,color:c.text,fontSize:12,outline:"none"}}>
-              <option value="">企業を選択...</option>
-              {companies.map(co => <option key={co.id} value={co.id}>{co.flag} {co.name}</option>)}
-            </select>
-          )}
-          {summaryKind === "paper" && (
-            <input type="text" value={paperKeyword} onChange={e => setPaperKeyword(e.target.value)} placeholder="検索キーワード（AI, neural, battery など）"
-              style={{flex:1,minWidth:200,padding:"6px 10px",borderRadius:6,border:"1px solid "+c.border,background:c.bg2,color:c.text,fontSize:12,outline:"none"}}/>
-          )}
-          <input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)} style={{padding:"5px 8px",borderRadius:5,border:"1px solid "+c.border,background:c.bg2,color:c.text,fontSize:12,outline:"none"}}/>
-          <span style={{fontSize:11,color:c.muted}}>〜</span>
-          <input type="date" value={dateTo}   onChange={e=>setDateTo(e.target.value)}   style={{padding:"5px 8px",borderRadius:5,border:"1px solid "+c.border,background:c.bg2,color:c.text,fontSize:12,outline:"none"}}/>
-          <label style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:c.muted,cursor:"pointer"}}>
-            <input type="checkbox" checked={onlyNew} onChange={e=>setOnlyNew(e.target.checked)}/> 未生成のみ
-          </label>
-        </div>
-        <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-          <button onClick={doGenerate} disabled={(summaryKind==="patent"&&!selCompany)||(summaryKind==="paper"&&!paperKeyword)||phase==="loading"||phase==="generating"}
-            style={{padding:"8px 20px",borderRadius:7,border:"none",background:(summaryKind==="patent"&&!selCompany)||(summaryKind==="paper"&&!paperKeyword)||phase==="loading"||phase==="generating"?"#1a3550":c.purple,color:(summaryKind==="patent"&&!selCompany)||(summaryKind==="paper"&&!paperKeyword)||phase==="loading"||phase==="generating"?c.muted:"#fff",fontWeight:700,fontSize:13,cursor:"pointer"}}>
-            {phase==="loading"?(summaryKind==="patent"?"特許取得中...":"論文取得中..."):phase==="generating"?"生成中 "+progress.done+"/"+progress.total+"件":"✨ AI解説を生成"}
-          </button>
-          {(phase==="loading"||phase==="generating") && (
-            <button onClick={() => stopRef.current=true} style={{padding:"8px 12px",borderRadius:6,border:"1px solid "+c.border,background:"transparent",color:c.amber,fontSize:12,cursor:"pointer"}}>⏹ 停止</button>
-          )}
-          {Object.keys(results).length > 0 && (
-            <button onClick={downloadCSV} style={{padding:"8px 16px",borderRadius:6,border:"1px solid "+c.green,background:"transparent",color:c.green,fontSize:12,cursor:"pointer"}}>📥 CSV保存（{Object.keys(results).length}件）</button>
-          )}
-          {phase==="done" && <span style={{fontSize:11,color:c.green}}>✅ 完了・DB保存済み</span>}
-        </div>
-
-        {/* プログレスバー */}
-        {(phase==="generating") && (
-          <div style={{marginTop:12}}>
-            <div style={{height:5,background:c.bg2,borderRadius:3,overflow:"hidden"}}>
-              <div style={{height:"100%",background:"linear-gradient(90deg,"+c.purple+",#a78bfa)",width:progress.total>0?(progress.done/progress.total*100)+"%":"0%",transition:"width .3s",borderRadius:3}}/>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {err && <div style={{padding:"8px 12px",background:"#1a1000",borderRadius:6,fontSize:11,color:c.amber,marginBottom:12}}>{err}</div>}
-
-      {/* 生成済みリスト */}
-      {Object.entries(results).length > 0 && (
-        <div style={card}>
-          <div style={{fontSize:11,color:c.muted,marginBottom:10}}>生成済み（{Object.keys(results).length}件）</div>
-          {Object.entries(results).map(([num, v]) => (
-            <div key={num} style={{padding:"10px 0",borderBottom:"1px solid "+c.border}}>
-              <div style={{display:"flex",gap:10,marginBottom:4}}>
-                <span style={{fontSize:10,color:c.muted,fontFamily:"monospace",flexShrink:0}}>{num}</span>
-                <span style={{fontSize:12,fontWeight:600,color:c.purple}}>{v.jaTitle}</span>
-              </div>
-              <div style={{fontSize:11,color:c.text,lineHeight:1.7,padding:"6px 10px",background:c.bg2,borderRadius:5,borderLeft:"2px solid #e879f9"}}>{v.summary}</div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    ⚙️ 企業管理タブ

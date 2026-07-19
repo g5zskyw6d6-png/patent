@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 
 // =============================================================================
 // PaperExplorer v5 — AI解説修正 + DB保存 + CSV + AI分析保存 + PDF
@@ -135,6 +135,97 @@ export default function PaperExplorer({ supabaseUrl, supabaseKey, claudeApiKey, 
         }
       }
     }catch(e){setErr("AI解説エラー: "+e.message);setAiPhase("idle");}
+  };
+
+  // ---- ★ 絞り込み結果を一括AI解説（検索条件に合致する全論文を翻訳してDB保存） ----
+  const [batchAiPhase, setBatchAiPhase] = useState("idle"); // idle | fetching | generating
+  const [batchAiProgress, setBatchAiProgress] = useState({done:0, total:0, saved:0});
+  const batchAiStop = useRef(false);
+
+  const doBatchAiExplain = async()=>{
+    if(!window.confirm(
+      "絞り込み結果 "+totalCount+" 件の論文のAI解説（日本語タイトル＋日本語要約）を一括生成してDBに保存します。\n\n"+
+      "※ 翻訳済みの論文はスキップします。\n"+
+      "※ Claude APIを使用します（最大500件）。\n"+
+      "続けますか？"
+    )) return;
+
+    setBatchAiPhase("fetching");
+    setBatchAiProgress({done:0, total:0, saved:0});
+    batchAiStop.current = false;
+
+    try{
+      // 絞り込み条件に合致する論文を取得（被引用数順・最大500件）
+      let fp=[]; const kf=buildKeywordFilter(keyword); if(kf) fp.push(kf);
+      if(companySlug) fp.push(`company_slug=eq.${companySlug}`);
+      if(yearFilter) fp.push(`publication_year=eq.${yearFilter}`);
+      const qs=[`select=openalex_id,title,title_ja,abstract_text,abstract_ja`,
+        ...fp,"order=cited_by_count.desc","limit=500"].join("&");
+      const res=await fetch(`${supabaseUrl}/rest/v1/papers_search?${qs}`,{
+        headers:{apikey:supabaseKey,Authorization:`Bearer ${supabaseKey}`,"Accept-Profile":"openalex"}});
+      if(!res.ok) throw new Error("論文取得失敗: HTTP "+res.status);
+      const allPapers=await res.json();
+
+      // 未翻訳のみ対象（title_ja と abstract_ja の両方が揃っているものはスキップ）
+      const targets=(Array.isArray(allPapers)?allPapers:[]).filter(p=>!p.title_ja||!p.abstract_ja);
+      if(targets.length===0){
+        setErr("すべての論文が翻訳済みです。");
+        setBatchAiPhase("idle"); return;
+      }
+
+      setBatchAiPhase("generating");
+      setBatchAiProgress({done:0, total:targets.length, saved:0});
+      let savedCount=0;
+
+      for(let i=0;i<targets.length;i++){
+        if(batchAiStop.current) break;
+        const paper=targets[i];
+        try{
+          const text=await claudePost(
+            `あなたは学術論文の翻訳者です。以下の英語論文のタイトルと要約を正確に日本語に翻訳してください。\n\n`
+            +`【原題】\n${paper.title}\n\n`
+            +`【Abstract】\n${paper.abstract_text||"(要約なし)"}\n\n`
+            +`以下の形式で回答してください。各セクションの後に必ず改行を入れてください:\n\n`
+            +`TITLE_JA:\n（日本語タイトルをここに記述）\n\n`
+            +`ABSTRACT_JA:\n（日本語要約をここに記述。原文の段落構成を維持すること）`, 2500);
+
+          let titleJa="", abstractJa="";
+          const titleMatch=text.match(/TITLE_JA:\s*\n?([\s\S]*?)(?=\n\s*ABSTRACT_JA:)/i);
+          if(titleMatch) titleJa=titleMatch[1].trim();
+          else{ const m2=text.match(/TITLE_JA:\s*(.+)/i); if(m2) titleJa=m2[1].trim(); }
+          const absMatch=text.match(/ABSTRACT_JA:\s*\n?([\s\S]*?)$/i);
+          if(absMatch) abstractJa=absMatch[1].trim();
+
+          if(titleJa||abstractJa){
+            // 実績のある RPC（update_paper_translation）で保存
+            const saveRes=await fetch(`${supabaseUrl}/rest/v1/rpc/update_paper_translation`,{
+              method:"POST",
+              headers:{apikey:supabaseKey,Authorization:`Bearer ${supabaseKey}`,"Content-Type":"application/json"},
+              body:JSON.stringify({
+                p_openalex_id: paper.openalex_id,
+                p_title_ja: titleJa||null,
+                p_abstract_ja: abstractJa||null
+              })
+            });
+            if(saveRes.ok) savedCount++;
+            else console.warn("翻訳保存失敗:", paper.openalex_id, saveRes.status);
+
+            // 画面上の検索結果にも反映
+            setResults(prev=>prev.map(r=>r.openalex_id===paper.openalex_id
+              ?{...r,title_ja:titleJa||r.title_ja,abstract_ja:abstractJa||r.abstract_ja}:r));
+          }
+        }catch(e){
+          console.warn("翻訳失敗:", paper.openalex_id, e.message);
+        }
+        setBatchAiProgress({done:i+1, total:targets.length, saved:savedCount});
+        if(i<targets.length-1) await new Promise(r=>setTimeout(r,800));
+      }
+
+      setErr("✅ 一括AI解説完了（"+savedCount+"/"+targets.length+"件 保存）");
+    }catch(e){
+      setErr("一括AI解説エラー: "+e.message);
+    }
+    setBatchAiPhase("idle");
   };
 
   // ---- CSV保存 ----
@@ -290,6 +381,28 @@ export default function PaperExplorer({ supabaseUrl, supabaseKey, claudeApiKey, 
           {totalCount>0 && <button onClick={doAnalyzeResults} disabled={analyzePhase==="analyzing"}
             style={{width:"100%",padding:"8px 0",borderRadius:7,border:"none",background:analyzePhase==="analyzing"?c.bg3:c.amber,color:analyzePhase==="analyzing"?c.muted:"#000",fontWeight:700,fontSize:12,cursor:"pointer"}}>
             {analyzePhase==="analyzing"?"🤖 分析中...":"🤖 AI分析"}</button>}
+
+          {/* ★ 絞り込み結果を一括AI解説 */}
+          {totalCount>0 && <button onClick={doBatchAiExplain} disabled={batchAiPhase!=="idle"}
+            style={{width:"100%",padding:"8px 0",borderRadius:7,border:"1px solid "+(batchAiPhase==="idle"?"#e879f9":c.border),background:"transparent",color:batchAiPhase==="idle"?"#e879f9":c.muted,fontSize:11,fontWeight:600,cursor:batchAiPhase==="idle"?"pointer":"not-allowed",marginTop:8}}>
+            {batchAiPhase==="fetching"
+              ? "✨ 対象論文を取得中..."
+              : batchAiPhase==="generating"
+                ? "✨ "+batchAiProgress.done+"/"+batchAiProgress.total+"件翻訳中（保存:"+batchAiProgress.saved+"件）"
+                : "✨ AI解説を一括生成してDB保存"}</button>}
+          {batchAiPhase==="generating" && (
+            <>
+              <div style={{height:4,background:c.bg2,borderRadius:2,overflow:"hidden",marginTop:4,marginBottom:4}}>
+                <div style={{height:"100%",borderRadius:2,background:"linear-gradient(90deg,#e879f9,#a78bfa)",
+                  width:batchAiProgress.total>0?(batchAiProgress.done/batchAiProgress.total*100)+"%":"0%",
+                  transition:"width .3s"}}/>
+              </div>
+              <button onClick={()=>batchAiStop.current=true}
+                style={{width:"100%",padding:"4px",borderRadius:5,border:"1px solid "+c.border,background:"transparent",color:c.amber,fontSize:10,cursor:"pointer"}}>
+                ⏹ 停止
+              </button>
+            </>
+          )}
         </div>
       </div>
 
