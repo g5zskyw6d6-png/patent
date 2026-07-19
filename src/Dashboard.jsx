@@ -2176,12 +2176,17 @@ function KeywordsTab({ sbGet, claudePost, companies, supabaseUrl, supabaseKey, c
   const [dataSource,  setDataSource]  = useState("patent"); // patent | paper
   const [mode,        setMode]        = useState("overall"); // overall | company
   const [selCompany,  setSelCompany]  = useState(null);
+  const [selYear,     setSelYear]     = useState("");        // "" = 全期間 | "2024" など
   const [method,      setMethod]      = useState("simple"); // simple | ai
   const [phase,       setPhase]       = useState("idle");
   const [keywords,    setKeywords]    = useState([]);
   const [totalPatents,setTotalPatents]= useState(0);
   const [err,         setErr]         = useState("");
   const [aiProgress,  setAiProgress]  = useState({ done:0, total:0 });
+
+  // 年の選択肢（データ収集開始の2022年〜今年）
+  const YEARS = [];
+  for (let y = new Date().getFullYear(); y >= 2022; y--) YEARS.push(String(y));
 
   const maxCount = keywords.length > 0 ? keywords[0].count : 1;
 
@@ -2193,9 +2198,10 @@ function KeywordsTab({ sbGet, claudePost, companies, supabaseUrl, supabaseKey, c
       let summaryMap = {};
 
       if (dataSource === "patent") {
-        // ★ 特許モード
-        const baseFilter = mode === "company" && selCompany
-          ? "company_id=eq."+selCompany.id+"&" : "";
+        // ★ 特許モード（企業別・年別フィルター対応）
+        let baseFilter = "";
+        if (mode === "company" && selCompany) baseFilter += "company_id=eq."+selCompany.id+"&";
+        if (selYear) baseFilter += "publication_date=gte."+selYear+"-01-01&publication_date=lte."+selYear+"-12-31&";
         let offset = 0;
         while (true) {
           const rows = await sbGet(
@@ -2225,33 +2231,30 @@ function KeywordsTab({ sbGet, claudePost, companies, supabaseUrl, supabaseKey, c
           await new Promise(r => setTimeout(r, 200));
         }
       } else {
-        // ★ 論文モード — Supabase papers_search から全件取得
+        // ★ 論文モード — papers_search（openalexスキーマ）から全件取得（企業別・年別フィルター対応）
+        let paperFilter = "";
+        if (mode === "company" && selCompany) paperFilter += "company_slug=eq."+selCompany.id+"&";
+        if (selYear) paperFilter += "publication_year=eq."+selYear+"&";
         let offset = 0;
         while (true) {
-          const rows = await sbGet(
-            "papers_search?select=openalex_id,title,abstract_text"
-            +"&limit="+PAGE+"&offset="+offset
-          ).catch(() => []);
+          const res = await fetch(
+            supabaseUrl+"/rest/v1/papers_search?"+paperFilter
+            +"select=openalex_id,title,abstract_text,abstract_ja"
+            +"&limit="+PAGE+"&offset="+offset,
+            { headers: {
+                "apikey": supabaseKey,
+                "Authorization": "Bearer "+supabaseKey,
+                "Accept-Profile": "openalex",
+              } }
+          );
+          if (!res.ok) throw new Error("論文取得失敗: HTTP "+res.status);
+          const rows = await res.json();
           if (!rows || rows.length === 0) break;
           allData.push(...rows);
+          // 日本語要約は papers_search の abstract_ja をそのまま利用
+          rows.forEach(p => { if (p.abstract_ja) summaryMap[p.openalex_id] = p.abstract_ja; });
           if (rows.length < PAGE) break;
           offset += PAGE;
-          await new Promise(r => setTimeout(r, 200));
-        }
-
-        // paper_summaries から日本語要約を取得
-        let sOffset = 0;
-        while (true) {
-          const rows = await sbGet(
-            "paper_summaries?select=openalex_id,abstract_ja&limit="+PAGE+"&offset="+sOffset
-          ).catch(() => []);
-          if (!rows || rows.length === 0) break;
-          const idSet = new Set(allData.map(p => p.openalex_id));
-          rows.filter(s => idSet.has(s.openalex_id)).forEach(s => {
-            summaryMap[s.openalex_id] = s.abstract_ja;
-          });
-          if (rows.length < PAGE) break;
-          sOffset += PAGE;
           await new Promise(r => setTimeout(r, 200));
         }
       }
@@ -2381,24 +2384,32 @@ function KeywordsTab({ sbGet, claudePost, companies, supabaseUrl, supabaseKey, c
             <span style={{color:c.text}}>特許</span>
           </label>
           <label style={{display:"flex",alignItems:"center",gap:6,fontSize:11,cursor:"pointer"}}>
-            <input type="radio" name="dataSource" value="paper" checked={dataSource==="paper"} onChange={()=>{setDataSource("paper");setMode("overall");}}/>
+            <input type="radio" name="dataSource" value="paper" checked={dataSource==="paper"} onChange={()=>{setDataSource("paper");setMode("overall");setSelCompany(null);}}/>
             <span style={{color:c.text}}>論文</span>
           </label>
         </div>
 
-        {/* モード切替（全体 / 企業別） — 特許のみ */}
-        {dataSource === "patent" && (
-          <div style={{display:"flex",gap:6,marginBottom:12}}>
-            <button onClick={()=>setMode("overall")}
-              style={{padding:"5px 16px",borderRadius:6,border:"1px solid "+(mode==="overall"?"#e879f9":c.border),background:mode==="overall"?"#1a0a2a":"transparent",color:mode==="overall"?"#e879f9":c.muted,fontSize:12,cursor:"pointer",fontWeight:mode==="overall"?700:400}}>
-              🌐 全体ランキング
-            </button>
-            <button onClick={()=>setMode("company")}
-              style={{padding:"5px 16px",borderRadius:6,border:"1px solid "+(mode==="company"?"#e879f9":c.border),background:mode==="company"?"#1a0a2a":"transparent",color:mode==="company"?"#e879f9":c.muted,fontSize:12,cursor:"pointer",fontWeight:mode==="company"?700:400}}>
-              🏢 企業別ランキング
-            </button>
+        {/* モード切替（全体 / 企業別） — 特許・論文共通 */}
+        <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
+          <button onClick={()=>setMode("overall")}
+            style={{padding:"5px 16px",borderRadius:6,border:"1px solid "+(mode==="overall"?"#e879f9":c.border),background:mode==="overall"?"#1a0a2a":"transparent",color:mode==="overall"?"#e879f9":c.muted,fontSize:12,cursor:"pointer",fontWeight:mode==="overall"?700:400}}>
+            🌐 全体ランキング
+          </button>
+          <button onClick={()=>setMode("company")}
+            style={{padding:"5px 16px",borderRadius:6,border:"1px solid "+(mode==="company"?"#e879f9":c.border),background:mode==="company"?"#1a0a2a":"transparent",color:mode==="company"?"#e879f9":c.muted,fontSize:12,cursor:"pointer",fontWeight:mode==="company"?700:400}}>
+            🏢 企業別ランキング
+          </button>
+
+          {/* ★ 年フィルター（特許: 公開年 / 論文: 出版年） */}
+          <div style={{display:"flex",gap:4,alignItems:"center",marginLeft:8}}>
+            <span style={{fontSize:11,color:c.muted}}>📅 年：</span>
+            <select value={selYear} onChange={e=>setSelYear(e.target.value)}
+              style={{padding:"5px 10px",borderRadius:6,border:"1px solid "+(selYear?"#e879f9":c.border),background:c.bg2,color:selYear?"#e879f9":c.text,fontSize:12,outline:"none",cursor:"pointer",fontWeight:selYear?700:400}}>
+              <option value="">全期間</option>
+              {YEARS.map(y => <option key={y} value={y}>{y}年</option>)}
+            </select>
           </div>
-        )}
+        </div>
 
         {/* 企業選択 */}
         {mode === "company" && (
@@ -2458,7 +2469,7 @@ function KeywordsTab({ sbGet, claudePost, companies, supabaseUrl, supabaseKey, c
       {keywords.length > 0 && phase === "done" && (
         <>
           <div style={{fontSize:11,color:c.muted,marginBottom:10}}>
-            {dataSource==="patent"?"特許":"論文"} / {dataSource==="patent"&&mode==="overall"?"全体":dataSource==="patent"&&mode==="company"?"「"+(selCompany?.name||"")+"」":"全体"} / {totalPatents}件から抽出 / 抽出方法: {method==="simple"?"単純頻度集計":"Claude AI"} / TOP{keywords.length}
+            {dataSource==="patent"?"特許":"論文"} / {mode==="overall"?"全体":"「"+(selCompany?.name||"")+"」"} / {selYear?selYear+"年":"全期間"} / {totalPatents}件から抽出 / 抽出方法: {method==="simple"?"単純頻度集計":"Claude AI"} / TOP{keywords.length}
           </div>
           <div style={{display:"flex",justifyContent:"flex-end",marginBottom:8}}>
             <button
@@ -2471,7 +2482,8 @@ function KeywordsTab({ sbGet, claudePost, companies, supabaseUrl, supabaseKey, c
                 link.href  = URL.createObjectURL(blob);
                 const label = mode==="overall" ? "全体" : (selCompany?.name||"企業");
                 const meth  = method==="simple" ? "頻度" : "AI";
-                link.download = "キーワードランキング_特許_"+label+"_"+meth+".csv";
+                const yr    = selYear ? selYear+"年" : "全期間";
+                link.download = "キーワードランキング_"+(dataSource==="patent"?"特許":"論文")+"_"+label+"_"+yr+"_"+meth+".csv";
                 link.click();
               }}
               style={{padding:"6px 16px",borderRadius:6,border:"1px solid #16a34a",background:"transparent",color:"#16a34a",fontSize:12,fontWeight:600,cursor:"pointer"}}>
