@@ -469,7 +469,6 @@ useEffect(() => {
     { id:"manage",   label:"⚙️ 企業管理" },
     { id:"keywords",  label:"🏷️ キーワード" },
     { id:"tech",     label:"🧭 技術ポートフォリオ" },
-　　 { id:"research", label:"🔬 研究→IP転換"},
   ];
 
   return (
@@ -499,8 +498,7 @@ useEffect(() => {
 
       {tab === "manage"    && <ManageTab    supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} companies={companies} onRefresh={onClose} c={c} card={card}/>}
       {tab === "keywords"  && <KeywordsTab  sbGet={sbGet} claudePost={claudePost} companies={companies} supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} c={c} card={card}/>}
-      {tab === "tech"      && <TechPortfolio supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} c={c} card={card}/>}
-　　　　{tab === "research" && <ResearchIP supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} />}
+      {tab === "tech"      && <TechOrResearch supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} c={c} card={card}/>}
       <style>{`input[type=date]::-webkit-calendar-picker-indicator{filter:invert(0.6);}::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:#1a3550;border-radius:3px;}`}</style>
     </div>
   );
@@ -2544,6 +2542,35 @@ function SearchOrPaper(props) {
         : <PaperExplorer supabaseUrl={props.supabaseUrl} supabaseKey={props.supabaseKey}
             claudeApiKey={props.claudeApiKey} companies={props.companies} c={c} card={card} />
       }
+    </div>
+  );
+}
+
+/* ━━━ 技術ポートフォリオ統合ラッパー(ポートフォリオ/研究→IP転換 切替) ━━━ */
+function TechOrResearch({ supabaseUrl, supabaseKey, c, card }) {
+  const [view, setView] = useState("portfolio"); // portfolio | research
+  return (
+    <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+      <div style={{display:"flex",gap:4,padding:"8px 16px",background:c.bg1,borderBottom:"1px solid "+c.border,flexShrink:0}}>
+        <button onClick={()=>setView("portfolio")}
+          style={{padding:"5px 18px",borderRadius:6,border:"1px solid "+(view==="portfolio"?c.cyan:c.border),
+            background:view==="portfolio"?c.bg3:"transparent",color:view==="portfolio"?c.cyan:c.muted,
+            fontSize:12,cursor:"pointer",fontWeight:view==="portfolio"?700:400}}>
+          🧭 技術ポートフォリオ
+        </button>
+        <button onClick={()=>setView("research")}
+          style={{padding:"5px 18px",borderRadius:6,border:"1px solid "+(view==="research"?"#34d399":c.border),
+            background:view==="research"?c.bg3:"transparent",color:view==="research"?"#34d399":c.muted,
+            fontSize:12,cursor:"pointer",fontWeight:view==="research"?700:400}}>
+          🔬 研究→IP転換
+        </button>
+      </div>
+      <div style={{flex:1,overflowY:"auto"}}>
+        {view === "portfolio"
+          ? <TechPortfolio supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} c={c} card={card}/>
+          : <ResearchIP supabaseUrl={supabaseUrl} supabaseKey={supabaseKey}/>
+        }
+      </div>
     </div>
   );
 }
