@@ -1,0 +1,423 @@
+import { useState, useCallback, useEffect } from "react";
+
+/**
+ * PatentListModal.jsx
+ * 技術ポートフォリオから呼び出されるモーダル
+ * 企業 × カテゴリでフィルタされた特許一覧を表示
+ */
+export default function PatentListModal({
+  filterForModal,      // { company_id, company_name, category_id, category_name, level }
+  onClose,
+  sbRpc,
+  supabaseUrl,
+  supabaseKey,
+  companies,
+  taxonomy,
+  c,                   // CommonStyles
+  card                 // Card styles
+}) {
+  const [results, setResults] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [keyword, setKeyword] = useState("");
+  const [page, setPage] = useState(0);
+
+  const PAGE_SIZE = 15;
+
+  // Supabase から直接特許を検索
+  // フィルタ: 企業 + カテゴリ（タイトル/要約のキーワード）
+  const doSearch = useCallback(async (pg = 0) => {
+    setLoading(true);
+    setError("");
+    try {
+      // search_patents RPC を使用
+      // company_ids で絞り込み、keyword は任意（ユーザー入力）
+      const data = await sbRpc("search_patents", {
+        keyword: keyword.trim() || null,
+        inventor: null,
+        company_ids: [filterForModal.company_id],
+        countries: null,
+        from_date: null,
+        to_date: null,
+        page_offset: pg * PAGE_SIZE,
+        page_limit: PAGE_SIZE,
+      });
+
+      if (data?.data) {
+        setResults(data.data);
+        setTotalCount(data.count || 0);
+      } else {
+        setResults([]);
+        setTotalCount(0);
+      }
+    } catch (e) {
+      setError(e.message);
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [keyword, filterForModal.company_id, sbRpc, PAGE_SIZE]);
+
+  // ページ変更時に検索
+  useEffect(() => {
+    doSearch(page);
+  }, [page, doSearch]);
+
+  // キーワード変更時はページ 0 にリセット
+  const handleKeywordChange = (e) => {
+    setKeyword(e.target.value);
+    setPage(0);
+  };
+
+  const handleSearch = () => {
+    setPage(0);
+    doSearch(0);
+  };
+
+  // CSV ダウンロード（全件取得版）
+  const exportCsv = async () => {
+    try {
+      setLoading(true);
+      const allPatents = [];
+      let offset = 0;
+      const BATCH = 1000;
+
+      while (true) {
+        const batch = await sbRpc("search_patents", {
+          keyword: keyword.trim() || null,
+          inventor: null,
+          company_ids: [filterForModal.company_id],
+          countries: null,
+          from_date: null,
+          to_date: null,
+          page_offset: offset,
+          page_limit: BATCH,
+        });
+
+        if (!batch?.data || batch.data.length === 0) break;
+        allPatents.push(...batch.data);
+        offset += BATCH;
+      }
+
+      // CSV 生成
+      const csv = [
+        ["Patent Number", "Title", "Publication Date", "Country", "Company"].join(","),
+        ...allPatents.map(p =>
+          [
+            `"${p.patent_number || ""}"`,
+            `"${(p.title_ja || p.title_en || "").replace(/"/g, '""')}"`,
+            p.publication_date || "",
+            p.country || "",
+            filterForModal.company_name,
+          ].join(",")
+        ),
+      ].join("\n");
+
+      // ダウンロード
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `patents_${filterForModal.company_id}_${Date.now()}.csv`);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      setError("CSV 出力に失敗しました：" + e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const S = MODAL_STYLES;
+  const maxPages = Math.ceil(totalCount / PAGE_SIZE);
+
+  return (
+    <div style={S.overlay} onClick={onClose}>
+      <div style={S.modal} onClick={(e) => e.stopPropagation()}>
+        {/* ヘッダー */}
+        <div style={S.header}>
+          <div style={S.headerTitle}>
+            <span style={S.closeBtn} onClick={onClose}>✕</span>
+            <div>
+              <div style={S.modalTitle}>
+                {filterForModal.company_name} × {filterForModal.category_name}
+              </div>
+              <div style={S.modalSubtitle}>
+                特許一覧 ({totalCount} 件)
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* コントロール */}
+        <div style={S.controls}>
+          <input
+            type="text"
+            placeholder="キーワードで絞り込み（オプション）"
+            value={keyword}
+            onChange={handleKeywordChange}
+            onKeyDown={(e) => { if (e.key === "Enter") handleSearch(); }}
+            style={S.input}
+            disabled={loading}
+          />
+          <button onClick={handleSearch} style={S.searchBtn} disabled={loading}>
+            {loading ? "検索中…" : "検索"}
+          </button>
+          <button onClick={exportCsv} style={S.csvBtn} disabled={loading}>
+            📥 CSV
+          </button>
+        </div>
+
+        {/* エラー */}
+        {error && <div style={S.error}>{error}</div>}
+
+        {/* 結果テーブル */}
+        <div style={S.tableWrap}>
+          {loading ? (
+            <div style={S.loadingMsg}>読み込み中…</div>
+          ) : results.length === 0 ? (
+            <div style={S.emptyMsg}>該当する特許がありません</div>
+          ) : (
+            <table style={S.table}>
+              <thead>
+                <tr style={S.headerRow}>
+                  <th style={{ ...S.th, flex: "0 0 100px" }}>Patent No.</th>
+                  <th style={{ ...S.th, flex: "1" }}>Title</th>
+                  <th style={{ ...S.th, flex: "0 0 100px" }}>Date</th>
+                  <th style={{ ...S.th, flex: "0 0 60px" }}>Country</th>
+                </tr>
+              </thead>
+              <tbody>
+                {results.map((p, i) => (
+                  <tr key={i} style={S.row}>
+                    <td style={{ ...S.td, flex: "0 0 100px", fontFamily: "monospace", fontSize: 11 }}>
+                      {p.patent_number}
+                    </td>
+                    <td style={{ ...S.td, flex: "1" }}>
+                      <div style={S.titleCell}>
+                        {p.title_ja || p.title_en || "（タイトルなし）"}
+                      </div>
+                    </td>
+                    <td style={{ ...S.td, flex: "0 0 100px", fontSize: 11 }}>
+                      {p.publication_date}
+                    </td>
+                    <td style={{ ...S.td, flex: "0 0 60px", fontSize: 11, textAlign: "center" }}>
+                      {p.country}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* ページネーション */}
+        {maxPages > 1 && (
+          <div style={S.pagination}>
+            <button
+              onClick={() => setPage(Math.max(0, page - 1))}
+              disabled={page === 0 || loading}
+              style={S.pageBtn}
+            >
+              ← 前へ
+            </button>
+            <span style={S.pageInfo}>
+              {page + 1} / {maxPages}
+            </span>
+            <button
+              onClick={() => setPage(Math.min(maxPages - 1, page + 1))}
+              disabled={page >= maxPages - 1 || loading}
+              style={S.pageBtn}
+            >
+              次へ →
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ===== スタイル =====
+const MODAL_STYLES = {
+  overlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: "rgba(0,0,0,0.4)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1000,
+  },
+  modal: {
+    background: "#fff",
+    borderRadius: 12,
+    boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+    width: "90%",
+    maxWidth: "900px",
+    maxHeight: "80vh",
+    display: "flex",
+    flexDirection: "column",
+    fontFamily: "'Noto Sans JP', system-ui, sans-serif",
+  },
+  header: {
+    padding: "20px 24px",
+    borderBottom: "1px solid #E4E7EE",
+  },
+  headerTitle: {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: 12,
+    position: "relative",
+  },
+  closeBtn: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    fontSize: 20,
+    cursor: "pointer",
+    color: "#9AA1B0",
+    background: "none",
+    border: "none",
+    padding: 0,
+    width: 24,
+    height: 24,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 4,
+    ":hover": { background: "#F5F6F9" },
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: 700,
+    color: "#12151F",
+  },
+  modalSubtitle: {
+    fontSize: 12,
+    color: "#9AA1B0",
+    marginTop: 4,
+  },
+  controls: {
+    display: "flex",
+    gap: 10,
+    padding: "16px 24px",
+    borderBottom: "1px solid #F5F6F9",
+    alignItems: "center",
+  },
+  input: {
+    flex: 1,
+    padding: "8px 12px",
+    border: "1px solid #CFD4DF",
+    borderRadius: 6,
+    fontSize: 13,
+    fontFamily: "inherit",
+  },
+  searchBtn: {
+    padding: "8px 16px",
+    background: "#3B4EE0",
+    color: "#fff",
+    border: "none",
+    borderRadius: 6,
+    cursor: "pointer",
+    fontSize: 12,
+    fontWeight: 600,
+  },
+  csvBtn: {
+    padding: "8px 16px",
+    background: "#F5F6F9",
+    color: "#5A6274",
+    border: "1px solid #CFD4DF",
+    borderRadius: 6,
+    cursor: "pointer",
+    fontSize: 12,
+    fontWeight: 600,
+  },
+  error: {
+    padding: "12px 24px",
+    background: "#FEE2E2",
+    color: "#C94F71",
+    fontSize: 12,
+    borderBottom: "1px solid #FECACA",
+  },
+  tableWrap: {
+    flex: 1,
+    overflowY: "auto",
+    padding: "16px 24px",
+  },
+  loadingMsg: {
+    textAlign: "center",
+    color: "#9AA1B0",
+    padding: "40px 20px",
+    fontSize: 14,
+  },
+  emptyMsg: {
+    textAlign: "center",
+    color: "#9AA1B0",
+    padding: "40px 20px",
+    fontSize: 14,
+  },
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+  },
+  headerRow: {
+    borderBottom: "2px solid #E4E7EE",
+  },
+  th: {
+    padding: "10px 8px",
+    textAlign: "left",
+    fontSize: 12,
+    fontWeight: 600,
+    color: "#475569",
+    verticalAlign: "middle",
+  },
+  row: {
+    borderBottom: "1px solid #F5F6F9",
+    display: "flex",
+  },
+  td: {
+    padding: "10px 8px",
+    fontSize: 12,
+    color: "#12151F",
+    display: "flex",
+    alignItems: "center",
+  },
+  titleCell: {
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    display: "-webkit-box",
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: "vertical",
+    lineHeight: 1.4,
+  },
+  pagination: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 12,
+    padding: "16px 24px",
+    borderTop: "1px solid #F5F6F9",
+  },
+  pageBtn: {
+    padding: "6px 12px",
+    background: "#F5F6F9",
+    color: "#5A6274",
+    border: "1px solid #CFD4DF",
+    borderRadius: 4,
+    cursor: "pointer",
+    fontSize: 12,
+  },
+  pageInfo: {
+    fontSize: 12,
+    color: "#9AA1B0",
+    minWidth: 60,
+    textAlign: "center",
+  },
+};

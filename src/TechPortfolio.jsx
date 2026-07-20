@@ -16,6 +16,7 @@
 //   public.companies                       … 企業名・group_id
 // =============================================================================
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import PatentListModal from "./PatentListModal";
 
 const GROUPS = [
   { id: "group_west",   label: "グループ1（欧米）" },
@@ -46,7 +47,7 @@ const ratioColor = (val) => {
   return `rgba(${Math.round(180 + t * 60)},40,40,${0.25 + t * 0.55})`;
 };
 
-export default function TechPortfolio({ supabaseUrl, supabaseKey }) {
+export default function TechPortfolio({ supabaseUrl, supabaseKey, sbRpc }) {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
   const [taxonomy, setTaxonomy] = useState([]);
@@ -62,6 +63,8 @@ export default function TechPortfolio({ supabaseUrl, supabaseKey }) {
   const [groupFilter, setGroupFilter] = useState("all");
   const [view, setView]           = useState({ level:"top", parent:null });
   const [selected, setSelected]   = useState(null);
+  const [showPatentModal, setShowPatentModal] = useState(false);
+  const [filterForModal, setFilterForModal] = useState(null);
 
   // ---- データ取得 ----------------------------------------------------------
   const sbGet = useCallback((path, profile) => fetch(supabaseUrl + "/rest/v1/" + path, {
@@ -235,6 +238,16 @@ export default function TechPortfolio({ supabaseUrl, supabaseKey }) {
   const clickCell = (slug, col) => {
     if (view.level==="top" && drillable.has(Number(col.id))) {
       setView({ level:"drill", parent: col.id });
+    } else if (view.level==="top" || view.level==="drill") {
+      // モーダルを開く: 企業 × 大分類 or 小分類 の特許一覧
+      setFilterForModal({
+        company_id: slug,
+        company_name: coName(slug),
+        category_id: col.id,
+        category_name: col.name_ja,
+        level: view.level, // "top" or "drill"
+      });
+      setShowPatentModal(true);
     } else {
       setSelected(slug);
     }
@@ -328,6 +341,19 @@ export default function TechPortfolio({ supabaseUrl, supabaseKey }) {
       </div>
 
       <div ref={tip} style={S.tooltip}/>
+
+      {/* 特許一覧モーダル */}
+      {showPatentModal && filterForModal && sbRpc && (
+        <PatentListModal
+          filterForModal={filterForModal}
+          onClose={() => setShowPatentModal(false)}
+          sbRpc={sbRpc}
+          supabaseUrl={supabaseUrl}
+          supabaseKey={supabaseKey}
+          companies={companies}
+          taxonomy={taxonomy}
+        />
+      )}
     </div>
   );
 
