@@ -74,15 +74,16 @@ export default function PatentListModal({
       const catKeywords = getCategoryKeywords();
       const userKeyword = keyword.trim();
 
-      // URL 構築：複数キーワードのOR条件を正しくエンコード
+      // URL 構築：複数キーワードのOR条件を1つの or=() にまとめる
       let url = `${supabaseUrl}/rest/v1/patents?select=patent_number,title_ja,title_en,publication_date,country,company_id,company_name`;
 
       // 企業フィルタ（必須）
       url += `&company_id=eq.${filterForModal.company_id}`;
 
-      // カテゴリキーワードフィルタ（複数キーワードはOR結合）
-      if (catKeywords.length > 0) {
-        const orConditions = catKeywords.flatMap(kw => {
+      // カテゴリキーワード + ユーザーキーワードの全ORフィルタを構築
+      const allKeywords = [...catKeywords, ...(userKeyword ? [userKeyword] : [])];
+      if (allKeywords.length > 0) {
+        const orConditions = allKeywords.flatMap(kw => {
           const encoded = encodeURIComponent(kw);
           return [
             `title_ja.ilike.*${encoded}*`,
@@ -90,14 +91,8 @@ export default function PatentListModal({
             `abstract_epo.ilike.*${encoded}*`
           ];
         });
-        // or=(...) 形式で結合
+        // 全条件を1つの or=(...) にまとめる（重要：複数の or= パラメータは使わない）
         url += `&or=(${orConditions.join(",")})`;
-      }
-
-      // ユーザーキーワード追加フィルタ
-      if (userKeyword) {
-        const encoded = encodeURIComponent(userKeyword);
-        url += `&or=(title_ja.ilike.*${encoded}*,title_en.ilike.*${encoded}*,abstract_epo.ilike.*${encoded}*)`;
       }
 
       // ソートとページネーション
@@ -179,9 +174,10 @@ export default function PatentListModal({
       // 企業フィルタ
       baseUrl += `&company_id=eq.${filterForModal.company_id}`;
 
-      // カテゴリキーワードフィルタ
-      if (catKeywords.length > 0) {
-        const orConditions = catKeywords.flatMap(kw => {
+      // カテゴリキーワード + ユーザーキーワードの全ORフィルタ
+      const allKeywords = [...catKeywords, ...(userKeyword ? [userKeyword] : [])];
+      if (allKeywords.length > 0) {
+        const orConditions = allKeywords.flatMap(kw => {
           const encoded = encodeURIComponent(kw);
           return [
             `title_ja.ilike.*${encoded}*`,
@@ -189,13 +185,8 @@ export default function PatentListModal({
             `abstract_epo.ilike.*${encoded}*`
           ];
         });
+        // 全条件を1つの or=(...) にまとめる
         baseUrl += `&or=(${orConditions.join(",")})`;
-      }
-
-      // ユーザーキーワード
-      if (userKeyword) {
-        const encoded = encodeURIComponent(userKeyword);
-        baseUrl += `&or=(title_ja.ilike.*${encoded}*,title_en.ilike.*${encoded}*,abstract_epo.ilike.*${encoded}*)`;
       }
 
       baseUrl += `&order=publication_date.desc`;
