@@ -74,41 +74,51 @@ export default function PatentListModal({
       const catKeywords = getCategoryKeywords();
       const userKeyword = keyword.trim();
 
-      // キーワード検索フィルタの構築
-      let filterStr = `company_id=eq.${filterForModal.company_id}`;
+      // URL 構築：複数キーワードのOR条件を正しくエンコード
+      let url = `${supabaseUrl}/rest/v1/patents?select=patent_number,title_ja,title_en,publication_date,country,company_id,company_name`;
 
-      // タイトルまたは要約でカテゴリキーワードをマッチさせる
-      // 複数のキーワードはORで結合
-      const keywordFilters = catKeywords.map(kw => {
-        const encoded = kw.replace(/['"]/g, '');
-        return `or=(title_ja.ilike.*${encoded}*,title_en.ilike.*${encoded}*,abstract_epo.ilike.*${encoded}*)`;
-      }).join("&");
+      // 企業フィルタ（必須）
+      url += `&company_id=eq.${filterForModal.company_id}`;
 
-      // ユーザーキーワードがある場合は追加
-      let finalFilter = filterStr;
-      if (keywordFilters) {
-        finalFilter += "&" + keywordFilters;
+      // カテゴリキーワードフィルタ（複数キーワードはOR結合）
+      if (catKeywords.length > 0) {
+        const orConditions = catKeywords.flatMap(kw => {
+          const encoded = encodeURIComponent(kw);
+          return [
+            `title_ja.ilike.*${encoded}*`,
+            `title_en.ilike.*${encoded}*`,
+            `abstract_epo.ilike.*${encoded}*`
+          ];
+        });
+        // or=(...) 形式で結合
+        url += `&or=(${orConditions.join(",")})`;
       }
+
+      // ユーザーキーワード追加フィルタ
       if (userKeyword) {
-        const encoded = userKeyword.replace(/['"]/g, '');
-        finalFilter += `&or=(title_ja.ilike.*${encoded}*,title_en.ilike.*${encoded}*,abstract_epo.ilike.*${encoded}*)`;
+        const encoded = encodeURIComponent(userKeyword);
+        url += `&or=(title_ja.ilike.*${encoded}*,title_en.ilike.*${encoded}*,abstract_epo.ilike.*${encoded}*)`;
       }
 
-      // ② 合計件数を取得（count モード）
-      const countUrl = `${supabaseUrl}/rest/v1/patents?${finalFilter}&select=patent_number&count=exact`;
-      const countRes = await fetch(countUrl, { headers });
-      const countHeader = countRes.headers.get('content-range');
-      const totalCount = countHeader ? parseInt(countHeader.split('/')[1]) : 0;
+      // ソートとページネーション
+      url += `&order=publication_date.desc&limit=${PAGE_SIZE}&offset=${offset}`;
 
-      // ③ ページネーションデータを取得
-      const dataUrl = `${supabaseUrl}/rest/v1/patents?${finalFilter}&select=patent_number,title_ja,title_en,publication_date,country,company_id,company_name&order=publication_date.desc&limit=${PAGE_SIZE}&offset=${offset}`;
-      const dataRes = await fetch(dataUrl, { headers });
+      console.log("📊 Query URL:", url.substring(0, 200) + "...");
 
-      if (!dataRes.ok) {
-        throw new Error(`REST API failed: ${dataRes.status}`);
+      // ② データ取得
+      const res = await fetch(url, { headers });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error("❌ API Error Response:", errText);
+        throw new Error(`REST API failed: ${res.status}`);
       }
 
-      const data = await dataRes.json();
+      const data = await res.json();
+
+      // 合計件数を取得（content-range ヘッダから）
+      const contentRange = res.headers.get('content-range');
+      const totalCount = contentRange ? parseInt(contentRange.split('/')[1]) : data.length;
 
       console.log("📊 PatentListModal direct query result:", {
         category: filterForModal.category_name,
@@ -163,26 +173,36 @@ export default function PatentListModal({
       const catKeywords = getCategoryKeywords();
       const userKeyword = keyword.trim();
 
-      // フィルタの構築（検索と同じロジック）
-      let filterStr = `company_id=eq.${filterForModal.company_id}`;
+      // URL 構築（doSearch と同じロジック）
+      let baseUrl = `${supabaseUrl}/rest/v1/patents?select=patent_number,title_ja,title_en,publication_date,country`;
 
-      const keywordFilters = catKeywords.map(kw => {
-        const encoded = kw.replace(/['"]/g, '');
-        return `or=(title_ja.ilike.*${encoded}*,title_en.ilike.*${encoded}*,abstract_epo.ilike.*${encoded}*)`;
-      }).join("&");
+      // 企業フィルタ
+      baseUrl += `&company_id=eq.${filterForModal.company_id}`;
 
-      let finalFilter = filterStr;
-      if (keywordFilters) {
-        finalFilter += "&" + keywordFilters;
+      // カテゴリキーワードフィルタ
+      if (catKeywords.length > 0) {
+        const orConditions = catKeywords.flatMap(kw => {
+          const encoded = encodeURIComponent(kw);
+          return [
+            `title_ja.ilike.*${encoded}*`,
+            `title_en.ilike.*${encoded}*`,
+            `abstract_epo.ilike.*${encoded}*`
+          ];
+        });
+        baseUrl += `&or=(${orConditions.join(",")})`;
       }
+
+      // ユーザーキーワード
       if (userKeyword) {
-        const encoded = userKeyword.replace(/['"]/g, '');
-        finalFilter += `&or=(title_ja.ilike.*${encoded}*,title_en.ilike.*${encoded}*,abstract_epo.ilike.*${encoded}*)`;
+        const encoded = encodeURIComponent(userKeyword);
+        baseUrl += `&or=(title_ja.ilike.*${encoded}*,title_en.ilike.*${encoded}*,abstract_epo.ilike.*${encoded}*)`;
       }
+
+      baseUrl += `&order=publication_date.desc`;
 
       // バッチで全件取得
       while (true) {
-        const url = `${supabaseUrl}/rest/v1/patents?${finalFilter}&select=patent_number,title_ja,title_en,publication_date,country&order=publication_date.desc&limit=${BATCH}&offset=${offset}`;
+        const url = `${baseUrl}&limit=${BATCH}&offset=${offset}`;
         const res = await fetch(url, { headers });
 
         if (!res.ok) break;
