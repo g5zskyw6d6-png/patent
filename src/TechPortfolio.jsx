@@ -352,6 +352,7 @@ export default function TechPortfolio({ supabaseUrl, supabaseKey, sbRpc }) {
           supabaseKey={supabaseKey}
           companies={companies}
           taxonomy={taxonomy}
+          taxByCode={taxByCode}
         />
       )}
     </div>

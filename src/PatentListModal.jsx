@@ -13,6 +13,7 @@ export default function PatentListModal({
   supabaseKey,
   companies,
   taxonomy,
+  taxByCode,           // 大分類コード → 分類オブジェクトの map
   c,                   // CommonStyles
   card                 // Card styles
 }) {
@@ -25,39 +26,109 @@ export default function PatentListModal({
 
   const PAGE_SIZE = 15;
 
-  // Supabase から直接特許を検索
-  // フィルタ: 企業 + カテゴリ（タイトル/要約のキーワード）
+  // 初期化確認ログ
+  useEffect(() => {
+    console.log("🟢 PatentListModal mounted!", {
+      company: filterForModal?.company_name,
+      category: filterForModal?.category_name,
+      category_id: filterForModal?.category_id,
+      level: filterForModal?.level,
+      sbRpc: sbRpc ? "✓" : "✗ MISSING",
+    });
+  }, [filterForModal, sbRpc]);
+
+  // カテゴリのキーワードを構築（大分類の場合は親も含める）
+  const getCategoryKeywords = useCallback(() => {
+    if (!filterForModal.category_name) return [];
+    const keywords = [];
+    // メインのカテゴリ名
+    keywords.push(filterForModal.category_name);
+
+    // 小分類の場合は親分類も含める
+    if (filterForModal.level === "drill" && taxonomy) {
+      const taxItem = taxonomy.find(t => t.id === filterForModal.category_id);
+      if (taxItem?.parent_id) {
+        const parent = taxonomy.find(t => t.id === taxItem.parent_id);
+        if (parent) keywords.push(parent.name_ja);
+      }
+    }
+
+    return keywords;
+  }, [filterForModal, taxonomy]);
+
+  // Supabase から patents を直接クエリ（カテゴリフィルタに対応）
   const doSearch = useCallback(async (pg = 0) => {
     setLoading(true);
     setError("");
     try {
-      // search_patents RPC を使用
-      // company_ids で絞り込み、keyword は任意（ユーザー入力）
-      const data = await sbRpc("search_patents", {
-        keyword: keyword.trim() || null,
-        inventor: null,
-        company_ids: [filterForModal.company_id],
-        countries: null,
-        from_date: null,
-        to_date: null,
-        page_offset: pg * PAGE_SIZE,
-        page_limit: PAGE_SIZE,
+      const offset = pg * PAGE_SIZE;
+
+      // REST API で直接クエリ（search_patents RPC の制限を回避）
+      const headers = {
+        "apikey": supabaseKey,
+        "Authorization": "Bearer " + supabaseKey,
+        "Accept": "application/json",
+      };
+
+      // ① 企業 × カテゴリのマッチングキーワードで検索
+      const catKeywords = getCategoryKeywords();
+      const userKeyword = keyword.trim();
+
+      // キーワード検索フィルタの構築
+      let filterStr = `company_id=eq.${filterForModal.company_id}`;
+
+      // タイトルまたは要約でカテゴリキーワードをマッチさせる
+      // 複数のキーワードはORで結合
+      const keywordFilters = catKeywords.map(kw => {
+        const encoded = kw.replace(/['"]/g, '');
+        return `or=(title_ja.ilike.*${encoded}*,title_en.ilike.*${encoded}*,abstract_epo.ilike.*${encoded}*)`;
+      }).join("&");
+
+      // ユーザーキーワードがある場合は追加
+      let finalFilter = filterStr;
+      if (keywordFilters) {
+        finalFilter += "&" + keywordFilters;
+      }
+      if (userKeyword) {
+        const encoded = userKeyword.replace(/['"]/g, '');
+        finalFilter += `&or=(title_ja.ilike.*${encoded}*,title_en.ilike.*${encoded}*,abstract_epo.ilike.*${encoded}*)`;
+      }
+
+      // ② 合計件数を取得（count モード）
+      const countUrl = `${supabaseUrl}/rest/v1/patents?${finalFilter}&select=patent_number&count=exact`;
+      const countRes = await fetch(countUrl, { headers });
+      const countHeader = countRes.headers.get('content-range');
+      const totalCount = countHeader ? parseInt(countHeader.split('/')[1]) : 0;
+
+      // ③ ページネーションデータを取得
+      const dataUrl = `${supabaseUrl}/rest/v1/patents?${finalFilter}&select=patent_number,title_ja,title_en,publication_date,country,company_id,company_name&order=publication_date.desc&limit=${PAGE_SIZE}&offset=${offset}`;
+      const dataRes = await fetch(dataUrl, { headers });
+
+      if (!dataRes.ok) {
+        throw new Error(`REST API failed: ${dataRes.status}`);
+      }
+
+      const data = await dataRes.json();
+
+      console.log("📊 PatentListModal direct query result:", {
+        category: filterForModal.category_name,
+        company: filterForModal.company_name,
+        totalCount,
+        pageSize: data?.length || 0,
+        offset,
       });
 
-      if (data?.data) {
-        setResults(data.data);
-        setTotalCount(data.count || 0);
-      } else {
-        setResults([]);
-        setTotalCount(0);
-      }
+      setResults(data || []);
+      setTotalCount(totalCount);
     } catch (e) {
+      console.error("❌ PatentListModal query error:", e);
       setError(e.message);
       setResults([]);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
-  }, [keyword, filterForModal.company_id, sbRpc, PAGE_SIZE]);
+  }, [keyword, filterForModal.company_id, filterForModal.category_name, filterForModal.level, filterForModal.category_id, getCategoryKeywords, supabaseUrl, supabaseKey, PAGE_SIZE, taxonomy]);
 
   // ページ変更時に検索
   useEffect(() => {
@@ -83,20 +154,43 @@ export default function PatentListModal({
       let offset = 0;
       const BATCH = 1000;
 
-      while (true) {
-        const batch = await sbRpc("search_patents", {
-          keyword: keyword.trim() || null,
-          inventor: null,
-          company_ids: [filterForModal.company_id],
-          countries: null,
-          from_date: null,
-          to_date: null,
-          page_offset: offset,
-          page_limit: BATCH,
-        });
+      const headers = {
+        "apikey": supabaseKey,
+        "Authorization": "Bearer " + supabaseKey,
+        "Accept": "application/json",
+      };
 
-        if (!batch?.data || batch.data.length === 0) break;
-        allPatents.push(...batch.data);
+      const catKeywords = getCategoryKeywords();
+      const userKeyword = keyword.trim();
+
+      // フィルタの構築（検索と同じロジック）
+      let filterStr = `company_id=eq.${filterForModal.company_id}`;
+
+      const keywordFilters = catKeywords.map(kw => {
+        const encoded = kw.replace(/['"]/g, '');
+        return `or=(title_ja.ilike.*${encoded}*,title_en.ilike.*${encoded}*,abstract_epo.ilike.*${encoded}*)`;
+      }).join("&");
+
+      let finalFilter = filterStr;
+      if (keywordFilters) {
+        finalFilter += "&" + keywordFilters;
+      }
+      if (userKeyword) {
+        const encoded = userKeyword.replace(/['"]/g, '');
+        finalFilter += `&or=(title_ja.ilike.*${encoded}*,title_en.ilike.*${encoded}*,abstract_epo.ilike.*${encoded}*)`;
+      }
+
+      // バッチで全件取得
+      while (true) {
+        const url = `${supabaseUrl}/rest/v1/patents?${finalFilter}&select=patent_number,title_ja,title_en,publication_date,country&order=publication_date.desc&limit=${BATCH}&offset=${offset}`;
+        const res = await fetch(url, { headers });
+
+        if (!res.ok) break;
+
+        const batch = await res.json();
+        if (!batch || batch.length === 0) break;
+
+        allPatents.push(...batch);
         offset += BATCH;
       }
 
@@ -119,7 +213,7 @@ export default function PatentListModal({
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.setAttribute("href", url);
-      link.setAttribute("download", `patents_${filterForModal.company_id}_${Date.now()}.csv`);
+      link.setAttribute("download", `patents_${filterForModal.company_id}_${filterForModal.category_id}_${Date.now()}.csv`);
       link.style.visibility = "hidden";
       document.body.appendChild(link);
       link.click();
@@ -156,6 +250,8 @@ export default function PatentListModal({
         <div style={S.controls}>
           <input
             type="text"
+            id="patentKeywordSearch"
+            name="patentKeywordSearch"
             placeholder="キーワードで絞り込み（オプション）"
             value={keyword}
             onChange={handleKeywordChange}
