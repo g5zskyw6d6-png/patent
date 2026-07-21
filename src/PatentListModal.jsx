@@ -95,8 +95,8 @@ export default function PatentListModal({
         url += `&or=(${orConditions.join(",")})`;
       }
 
-      // ソートとページネーション
-      url += `&order=publication_date.desc&limit=${PAGE_SIZE}&offset=${offset}`;
+      // ソート、ページネーション、正確な件数取得
+      url += `&order=publication_date.desc&limit=${PAGE_SIZE}&offset=${offset}&count=exact`;
 
       console.log("📊 Query URL:", url.substring(0, 150) + "...");
 
@@ -238,7 +238,7 @@ export default function PatentListModal({
 
       // バッチで全件取得
       while (true) {
-        const url = `${baseUrl}&limit=${BATCH}&offset=${offset}`;
+        const url = `${baseUrl}&limit=${BATCH}&offset=${offset}&count=exact`;
         const res = await fetch(url, { headers });
 
         if (!res.ok) break;
