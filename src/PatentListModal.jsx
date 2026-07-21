@@ -105,15 +105,33 @@ export default function PatentListModal({
 
       if (!res.ok) {
         const errText = await res.text();
-        console.error("❌ API Error Response:", errText);
-        throw new Error(`REST API failed: ${res.status}`);
+        console.error("❌ API Error Response:", errText, "Status:", res.status);
+        throw new Error(`REST API failed: ${res.status} - ${errText}`);
       }
 
       const data = await res.json();
-
-      // 合計件数を取得（content-range ヘッダから）
       const contentRange = res.headers.get('content-range');
-      const totalCount = contentRange ? parseInt(contentRange.split('/')[1]) : data.length;
+
+      console.log("📊 API Response:", {
+        status: res.status,
+        contentRange: contentRange,
+        dataLength: data?.length || 0,
+      });
+
+      // 合計件数を取得
+      // content-range は "0-14/1234" の形式
+      let totalCount = 0;
+      if (contentRange) {
+        const parts = contentRange.split('/');
+        if (parts.length === 2) {
+          totalCount = parseInt(parts[1], 10);
+        }
+      }
+
+      // totalCount が NaN の場合はデータ長を使用
+      if (isNaN(totalCount)) {
+        totalCount = data?.length || 0;
+      }
 
       console.log("📊 PatentListModal direct query result:", {
         category: filterForModal.category_name,
