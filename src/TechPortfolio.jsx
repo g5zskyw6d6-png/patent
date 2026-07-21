@@ -240,8 +240,12 @@ export default function TechPortfolio({ supabaseUrl, supabaseKey, sbRpc }) {
       setView({ level:"drill", parent: col.id });
     } else if (view.level==="top" || view.level==="drill") {
       // モーダルを開く: 企業 × 大分類 or 小分類 の特許一覧
+      // slug は canonical_slug（文字列）なので、company オブジェクトから実際の id を取得
+      const company = Object.values(coMap).find(c => c.id === slug);
+      const companyId = company?.id || slug; // company の id が優先、なければ slug を使用
+
       setFilterForModal({
-        company_id: slug,
+        company_id: companyId,
         company_name: coName(slug),
         category_id: col.id,
         category_name: col.name_ja,
