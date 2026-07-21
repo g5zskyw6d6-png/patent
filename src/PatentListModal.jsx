@@ -98,21 +98,45 @@ export default function PatentListModal({
       // ソートとページネーション
       url += `&order=publication_date.desc&limit=${PAGE_SIZE}&offset=${offset}`;
 
-      console.log("📊 Query URL:", url.substring(0, 200) + "...");
+      console.log("📊 Query URL:", url.substring(0, 150) + "...");
 
       // ② データ取得
-      const res = await fetch(url, { headers });
-
-      if (!res.ok) {
-        const errText = await res.text();
-        console.error("❌ API Error Response:", errText, "Status:", res.status);
-        throw new Error(`REST API failed: ${res.status} - ${errText}`);
+      let res;
+      try {
+        res = await fetch(url, { headers });
+      } catch (fetchErr) {
+        console.error("❌ Fetch failed:", fetchErr.message);
+        throw fetchErr;
       }
 
-      const data = await res.json();
+      console.log("📊 Response Status:", res.status, "OK:", res.ok);
+
+      if (!res.ok) {
+        let errText = "";
+        try {
+          errText = await res.text();
+        } catch (e) {
+          errText = "Could not read error body";
+        }
+        console.error("❌ API Error Response:", {
+          status: res.status,
+          statusText: res.statusText,
+          body: errText.substring(0, 200),
+        });
+        throw new Error(`REST API failed: ${res.status}`);
+      }
+
+      let data = [];
+      try {
+        data = await res.json();
+      } catch (jsonErr) {
+        console.error("❌ JSON parse failed:", jsonErr.message);
+        throw jsonErr;
+      }
+
       const contentRange = res.headers.get('content-range');
 
-      console.log("📊 API Response:", {
+      console.log("📊 API Response Success:", {
         status: res.status,
         contentRange: contentRange,
         dataLength: data?.length || 0,
@@ -129,7 +153,7 @@ export default function PatentListModal({
       }
 
       // totalCount が NaN の場合はデータ長を使用
-      if (isNaN(totalCount)) {
+      if (isNaN(totalCount) || totalCount === 0) {
         totalCount = data?.length || 0;
       }
 
@@ -144,7 +168,10 @@ export default function PatentListModal({
       setResults(data || []);
       setTotalCount(totalCount);
     } catch (e) {
-      console.error("❌ PatentListModal query error:", e);
+      console.error("❌ PatentListModal query error:", {
+        message: e.message,
+        stack: e.stack?.substring(0, 200),
+      });
       setError(e.message);
       setResults([]);
       setTotalCount(0);
