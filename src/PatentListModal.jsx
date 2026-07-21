@@ -63,7 +63,7 @@ export default function PatentListModal({
     try {
       // search_patents RPC を使用（元の Dashboard と同じロジック）
       const userKeyword = keyword.trim();
-      const data = await sbRpc("search_patents", {
+      const params = {
         keyword: userKeyword || null,
         inventor: null,
         company_ids: [filterForModal.company_id],
@@ -72,7 +72,16 @@ export default function PatentListModal({
         to_date: null,
         page_offset: pg * PAGE_SIZE,
         page_limit: PAGE_SIZE,
+      };
+
+      console.log("📊 search_patents RPC params:", {
+        company_id: filterForModal.company_id,
+        company_name: filterForModal.company_name,
+        keyword: userKeyword,
+        ...params,
       });
+
+      const data = await sbRpc("search_patents", params);
 
       console.log("📊 search_patents RPC result:", {
         category: filterForModal.category_name,
