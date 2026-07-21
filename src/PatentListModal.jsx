@@ -80,19 +80,28 @@ export default function PatentListModal({
       // 企業フィルタ（必須）
       url += `&company_id=eq.${filterForModal.company_id}`;
 
+      // 🔍 DEBUG: キーワードフィルタを一時無効化して、企業だけで検索
+      // 企業別の特許が存在するか確認
+      console.log("📊 Category Keywords:", catKeywords);
+      console.log("📊 User Keyword:", userKeyword);
+
       // カテゴリキーワード + ユーザーキーワードの全ORフィルタを構築
       const allKeywords = [...catKeywords, ...(userKeyword ? [userKeyword] : [])];
       if (allKeywords.length > 0) {
         const orConditions = allKeywords.flatMap(kw => {
           const encoded = encodeURIComponent(kw);
+          console.log("📊 Encoding keyword:", kw, "→", encoded);
           return [
             `title_ja.ilike.*${encoded}*`,
             `title_en.ilike.*${encoded}*`,
             `abstract_epo.ilike.*${encoded}*`
           ];
         });
+        console.log("📊 OR Conditions:", orConditions);
         // 全条件を1つの or=(...) にまとめる（重要：複数の or= パラメータは使わない）
         url += `&or=(${orConditions.join(",")})`;
+      } else {
+        console.log("⚠️ No keywords to filter, returning all patents for company");
       }
 
       // ソート、ページネーション、正確な件数取得
