@@ -56,128 +56,47 @@ export default function PatentListModal({
     return keywords;
   }, [filterForModal, taxonomy]);
 
-  // Supabase から patents を直接クエリ（カテゴリフィルタに対応）
+  // search_patents RPC を使用（企業でのフィルタ）
   const doSearch = useCallback(async (pg = 0) => {
     setLoading(true);
     setError("");
     try {
-      const offset = pg * PAGE_SIZE;
-
-      // REST API で直接クエリ（search_patents RPC の制限を回避）
-      const headers = {
-        "apikey": supabaseKey,
-        "Authorization": "Bearer " + supabaseKey,
-        "Accept": "application/json",
-      };
-
-      // ① 企業 × カテゴリのマッチングキーワードで検索
-      const catKeywords = getCategoryKeywords();
+      // search_patents RPC を使用（元の Dashboard と同じロジック）
       const userKeyword = keyword.trim();
-
-      // URL 構築：複数キーワードのOR条件を1つの or=() にまとめる
-      let url = `${supabaseUrl}/rest/v1/patents?select=patent_number,title_ja,title_en,publication_date,country,company_id,company_name`;
-
-      // 企業フィルタ（必須）
-      url += `&company_id=eq.${filterForModal.company_id}`;
-
-      // キーワードフィルタ（Supabase の複雑なフィルタ制限を考慮）
-      // 主キーワード（最初の1つ）のみを使用して、フィルタの複雑さを軽減
-      const mainKeyword = catKeywords.length > 0 ? catKeywords[0] : (userKeyword || null);
-
-      console.log("📊 Main Filter Keyword:", mainKeyword);
-
-      if (mainKeyword) {
-        const encoded = encodeURIComponent(mainKeyword);
-        // シンプルな OR 条件（3つの フィールドのみ）
-        url += `&or=(title_ja.ilike.*${encoded}*,title_en.ilike.*${encoded}*,abstract_epo.ilike.*${encoded}*)`;
-      } else {
-        console.log("⚠️ No keywords to filter, returning all patents for company");
-      }
-
-      // ソート、ページネーション、正確な件数取得
-      url += `&order=publication_date.desc&limit=${PAGE_SIZE}&offset=${offset}&count=exact`;
-
-      console.log("📊 Query URL:", url.substring(0, 150) + "...");
-
-      // ② データ取得
-      let res;
-      try {
-        res = await fetch(url, { headers });
-      } catch (fetchErr) {
-        console.error("❌ Fetch failed:", fetchErr.message);
-        throw fetchErr;
-      }
-
-      console.log("📊 Response Status:", res.status, "OK:", res.ok);
-
-      if (!res.ok) {
-        let errText = "";
-        try {
-          errText = await res.text();
-        } catch (e) {
-          errText = "Could not read error body";
-        }
-        console.error("❌ API Error Response:", {
-          status: res.status,
-          statusText: res.statusText,
-          body: errText.substring(0, 200),
-        });
-        throw new Error(`REST API failed: ${res.status}`);
-      }
-
-      let data = [];
-      try {
-        data = await res.json();
-      } catch (jsonErr) {
-        console.error("❌ JSON parse failed:", jsonErr.message);
-        throw jsonErr;
-      }
-
-      const contentRange = res.headers.get('content-range');
-
-      console.log("📊 API Response Success:", {
-        status: res.status,
-        contentRange: contentRange,
-        dataLength: data?.length || 0,
+      const data = await sbRpc("search_patents", {
+        keyword: userKeyword || null,
+        inventor: null,
+        company_ids: [filterForModal.company_id],
+        countries: null,
+        from_date: null,
+        to_date: null,
+        page_offset: pg * PAGE_SIZE,
+        page_limit: PAGE_SIZE,
       });
 
-      // 合計件数を取得
-      // content-range は "0-14/1234" の形式
-      let totalCount = 0;
-      if (contentRange) {
-        const parts = contentRange.split('/');
-        if (parts.length === 2) {
-          totalCount = parseInt(parts[1], 10);
-        }
-      }
-
-      // totalCount が NaN の場合はデータ長を使用
-      if (isNaN(totalCount) || totalCount === 0) {
-        totalCount = data?.length || 0;
-      }
-
-      console.log("📊 PatentListModal direct query result:", {
+      console.log("📊 search_patents RPC result:", {
         category: filterForModal.category_name,
         company: filterForModal.company_name,
-        totalCount,
-        pageSize: data?.length || 0,
-        offset,
+        count: data?.count || 0,
+        dataLength: data?.data?.length || 0,
       });
 
-      setResults(data || []);
-      setTotalCount(totalCount);
+      if (data?.data) {
+        setResults(data.data);
+        setTotalCount(data.count || 0);
+      } else {
+        setResults([]);
+        setTotalCount(0);
+      }
     } catch (e) {
-      console.error("❌ PatentListModal query error:", {
-        message: e.message,
-        stack: e.stack?.substring(0, 200),
-      });
+      console.error("❌ search_patents RPC error:", e.message);
       setError(e.message);
       setResults([]);
       setTotalCount(0);
     } finally {
       setLoading(false);
     }
-  }, [keyword, filterForModal.company_id, filterForModal.category_name, filterForModal.level, filterForModal.category_id, getCategoryKeywords, supabaseUrl, supabaseKey, PAGE_SIZE, taxonomy]);
+  }, [keyword, filterForModal.company_id, sbRpc, PAGE_SIZE]);
 
   // ページ変更時に検索
   useEffect(() => {
@@ -202,42 +121,24 @@ export default function PatentListModal({
       const allPatents = [];
       let offset = 0;
       const BATCH = 1000;
-
-      const headers = {
-        "apikey": supabaseKey,
-        "Authorization": "Bearer " + supabaseKey,
-        "Accept": "application/json",
-      };
-
-      const catKeywords = getCategoryKeywords();
       const userKeyword = keyword.trim();
 
-      // URL 構築（doSearch と同じロジック）
-      let baseUrl = `${supabaseUrl}/rest/v1/patents?select=patent_number,title_ja,title_en,publication_date,country`;
-
-      // 企業フィルタ
-      baseUrl += `&company_id=eq.${filterForModal.company_id}`;
-
-      // 主キーワード（最初の1つ）のみを使用
-      const mainKeyword = catKeywords.length > 0 ? catKeywords[0] : (userKeyword || null);
-      if (mainKeyword) {
-        const encoded = encodeURIComponent(mainKeyword);
-        baseUrl += `&or=(title_ja.ilike.*${encoded}*,title_en.ilike.*${encoded}*,abstract_epo.ilike.*${encoded}*)`;
-      }
-
-      baseUrl += `&order=publication_date.desc`;
-
-      // バッチで全件取得
+      // バッチで全件取得（search_patents RPC）
       while (true) {
-        const url = `${baseUrl}&limit=${BATCH}&offset=${offset}&count=exact`;
-        const res = await fetch(url, { headers });
+        const batch = await sbRpc("search_patents", {
+          keyword: userKeyword || null,
+          inventor: null,
+          company_ids: [filterForModal.company_id],
+          countries: null,
+          from_date: null,
+          to_date: null,
+          page_offset: offset,
+          page_limit: BATCH,
+        });
 
-        if (!res.ok) break;
+        if (!batch?.data || batch.data.length === 0) break;
 
-        const batch = await res.json();
-        if (!batch || batch.length === 0) break;
-
-        allPatents.push(...batch);
+        allPatents.push(...batch.data);
         offset += BATCH;
       }
 
