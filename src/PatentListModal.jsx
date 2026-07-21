@@ -80,26 +80,16 @@ export default function PatentListModal({
       // 企業フィルタ（必須）
       url += `&company_id=eq.${filterForModal.company_id}`;
 
-      // 🔍 DEBUG: キーワードフィルタを一時無効化して、企業だけで検索
-      // 企業別の特許が存在するか確認
-      console.log("📊 Category Keywords:", catKeywords);
-      console.log("📊 User Keyword:", userKeyword);
+      // キーワードフィルタ（Supabase の複雑なフィルタ制限を考慮）
+      // 主キーワード（最初の1つ）のみを使用して、フィルタの複雑さを軽減
+      const mainKeyword = catKeywords.length > 0 ? catKeywords[0] : (userKeyword || null);
 
-      // カテゴリキーワード + ユーザーキーワードの全ORフィルタを構築
-      const allKeywords = [...catKeywords, ...(userKeyword ? [userKeyword] : [])];
-      if (allKeywords.length > 0) {
-        const orConditions = allKeywords.flatMap(kw => {
-          const encoded = encodeURIComponent(kw);
-          console.log("📊 Encoding keyword:", kw, "→", encoded);
-          return [
-            `title_ja.ilike.*${encoded}*`,
-            `title_en.ilike.*${encoded}*`,
-            `abstract_epo.ilike.*${encoded}*`
-          ];
-        });
-        console.log("📊 OR Conditions:", orConditions);
-        // 全条件を1つの or=(...) にまとめる（重要：複数の or= パラメータは使わない）
-        url += `&or=(${orConditions.join(",")})`;
+      console.log("📊 Main Filter Keyword:", mainKeyword);
+
+      if (mainKeyword) {
+        const encoded = encodeURIComponent(mainKeyword);
+        // シンプルな OR 条件（3つの フィールドのみ）
+        url += `&or=(title_ja.ilike.*${encoded}*,title_en.ilike.*${encoded}*,abstract_epo.ilike.*${encoded}*)`;
       } else {
         console.log("⚠️ No keywords to filter, returning all patents for company");
       }
@@ -228,19 +218,11 @@ export default function PatentListModal({
       // 企業フィルタ
       baseUrl += `&company_id=eq.${filterForModal.company_id}`;
 
-      // カテゴリキーワード + ユーザーキーワードの全ORフィルタ
-      const allKeywords = [...catKeywords, ...(userKeyword ? [userKeyword] : [])];
-      if (allKeywords.length > 0) {
-        const orConditions = allKeywords.flatMap(kw => {
-          const encoded = encodeURIComponent(kw);
-          return [
-            `title_ja.ilike.*${encoded}*`,
-            `title_en.ilike.*${encoded}*`,
-            `abstract_epo.ilike.*${encoded}*`
-          ];
-        });
-        // 全条件を1つの or=(...) にまとめる
-        baseUrl += `&or=(${orConditions.join(",")})`;
+      // 主キーワード（最初の1つ）のみを使用
+      const mainKeyword = catKeywords.length > 0 ? catKeywords[0] : (userKeyword || null);
+      if (mainKeyword) {
+        const encoded = encodeURIComponent(mainKeyword);
+        baseUrl += `&or=(title_ja.ilike.*${encoded}*,title_en.ilike.*${encoded}*,abstract_epo.ilike.*${encoded}*)`;
       }
 
       baseUrl += `&order=publication_date.desc`;
