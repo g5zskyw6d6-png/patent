@@ -244,10 +244,13 @@ export default function TechPortfolio({ supabaseUrl, supabaseKey, sbRpc }) {
       const company = Object.values(coMap).find(c => c.id === slug);
       const companyId = company?.id || slug; // company の id が優先、なければ slug を使用
 
+      // 小分類の場合、parent_id を使用（taxonomy_patent_class は大分類のみ対応）
+      const taxonomyId = view.level === "drill" ? col.parent_id : col.id;
+
       setFilterForModal({
         company_id: companyId,
         company_name: coName(slug),
-        category_id: col.id,
+        category_id: taxonomyId,
         category_name: col.name_ja,
         level: view.level, // "top" or "drill"
       });
