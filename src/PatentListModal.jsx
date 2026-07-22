@@ -71,6 +71,7 @@ export default function PatentListModal({
         to_date: null,
         page_offset: pg * PAGE_SIZE,
         page_limit: PAGE_SIZE,
+        taxonomy_id: filterForModal.category_id || null,
       };
 
       console.log("📊 search_patents RPC params:", {
@@ -143,6 +144,7 @@ export default function PatentListModal({
           to_date: null,
           page_offset: offset,
           page_limit: BATCH,
+          taxonomy_id: filterForModal.category_id || null,
         });
 
         if (!batch?.data || batch.data.length === 0) break;
