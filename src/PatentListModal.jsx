@@ -61,7 +61,6 @@ export default function PatentListModal({
     setLoading(true);
     setError("");
     try {
-      // search_patents RPC を使用（元の Dashboard と同じロジック）
       const userKeyword = keyword.trim();
       const params = {
         keyword: userKeyword || null,
@@ -84,15 +83,16 @@ export default function PatentListModal({
       const data = await sbRpc("search_patents", params);
 
       console.log("📊 search_patents RPC result:", {
-        category: filterForModal.category_name,
-        company: filterForModal.company_name,
-        count: data?.count || 0,
-        dataLength: data?.data?.length || 0,
+        isArray: Array.isArray(data),
+        length: Array.isArray(data) ? data.length : 0,
+        firstItem: Array.isArray(data) && data[0] ? data[0].patent_number : null,
+        firstItemTotal: Array.isArray(data) && data[0] ? data[0].total_count : null,
       });
 
-      if (data?.data) {
-        setResults(data.data);
-        setTotalCount(data.count || 0);
+      // ✅ 修正：RPC結果は配列で、各要素に total_count フィールドがある
+      if (Array.isArray(data) && data.length > 0) {
+        setResults(data);
+        setTotalCount(data[0].total_count || 0);
       } else {
         setResults([]);
         setTotalCount(0);
