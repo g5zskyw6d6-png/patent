@@ -247,6 +247,14 @@ export default function TechPortfolio({ supabaseUrl, supabaseKey, sbRpc }) {
       // 小分類の場合、parent_id を使用（taxonomy_patent_class は大分類のみ対応）
       const taxonomyId = view.level === "drill" ? col.parent_id : col.id;
 
+      console.log("🔍 clickCell debug:", {
+        level: view.level,
+        col_id: col.id,
+        col_parent_id: col.parent_id,
+        taxonomyId: taxonomyId,
+        col_name_ja: col.name_ja,
+      });
+
       setFilterForModal({
         company_id: companyId,
         company_name: coName(slug),
