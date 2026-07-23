@@ -31,7 +31,8 @@
 -- =============================================================================
 
 -- パフォーマンス用インデックス（未作成の場合のみ）
-CREATE INDEX IF NOT EXISTS idx_works_publication_date ON openalex.works (publication_date);
+-- ※ openalex.works.publication_date は text 型のため、キャスト式に対する関数インデックスを作成
+CREATE INDEX IF NOT EXISTS idx_works_publication_date ON openalex.works ((publication_date::date));
 CREATE INDEX IF NOT EXISTS idx_work_companies_slug     ON openalex.work_companies (company_slug);
 
 CREATE OR REPLACE FUNCTION public.detect_keyword_bursts(
@@ -68,7 +69,7 @@ AS $$
   ),
   base AS (
     SELECT
-      date_trunc('month', w.publication_date)::date AS month,
+      date_trunc('month', w.publication_date::date)::date AS month,
       (t.value ->> 'display_name') AS topic,
       (t.value ->> 'field')        AS field,
       (t.value ->> 'domain')       AS domain,
@@ -81,7 +82,7 @@ AS $$
       AND w.topics IS NOT NULL
       AND (t.value ->> 'display_name') IS NOT NULL
       AND (p_company_slug IS NULL OR wc.company_slug = p_company_slug)
-      AND w.publication_date >= b.baseline_start
+      AND w.publication_date::date >= b.baseline_start
   ),
   monthly AS (
     SELECT topic, field, domain, month, count(DISTINCT openalex_id) AS cnt
