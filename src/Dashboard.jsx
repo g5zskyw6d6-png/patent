@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import TechPortfolio from "./TechPortfolio";
 import PaperExplorer from "./PaperExplorer";
+import BurstDetector from "./BurstDetector";
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    Dashboard.jsx — 分析・解説・比較・概要の全機能ハブ
@@ -467,6 +468,7 @@ useEffect(() => {
     { id:"analyze",  label:"🤖 AI分析" },
     { id:"manage",   label:"⚙️ 企業管理" },
     { id:"keywords",  label:"🏷️ キーワード" },
+    { id:"burst",    label:"🔥 バースト検知" },
     { id:"tech",     label:"🧭 技術ポートフォリオ" },
   ];
 
@@ -497,6 +499,7 @@ useEffect(() => {
 
       {tab === "manage"    && <ManageTab    supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} companies={companies} onRefresh={onClose} c={c} card={card}/>}
       {tab === "keywords"  && <KeywordsTab  sbGet={sbGet} claudePost={claudePost} companies={companies} supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} c={c} card={card}/>}
+      {tab === "burst"     && <BurstDetector supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} companies={companies} c={c} card={card}/>}
       {tab === "tech"      && <TechPortfolio supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} sbRpc={sbRpc}/>}
       <style>{`input[type=date]::-webkit-calendar-picker-indicator{filter:invert(0.6);}::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:#1a3550;border-radius:3px;}`}</style>
     </div>
