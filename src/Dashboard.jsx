@@ -499,7 +499,7 @@ useEffect(() => {
 
       {tab === "manage"    && <ManageTab    supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} companies={companies} onRefresh={onClose} c={c} card={card}/>}
       {tab === "keywords"  && <KeywordsTab  sbGet={sbGet} claudePost={claudePost} companies={companies} supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} c={c} card={card}/>}
-      {tab === "burst"     && <BurstDetector supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} companies={companies} c={c} card={card}/>}
+      {tab === "burst"     && <BurstDetector supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} claudePost={claudePost} companies={companies} c={c} card={card}/>}
       {tab === "tech"      && <TechPortfolio supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} sbRpc={sbRpc}/>}
       <style>{`input[type=date]::-webkit-calendar-picker-indicator{filter:invert(0.6);}::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:#1a3550;border-radius:3px;}`}</style>
     </div>

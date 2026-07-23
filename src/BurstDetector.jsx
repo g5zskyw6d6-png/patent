@@ -6,18 +6,23 @@ import { useState } from "react";
 // 直近Nヶ月 vs それ以前Mヶ月のベースラインを比較し、出現頻度が急増した
 // キーワード（≒新出キーワード）をランキング表示する。
 //
-// キーワードの単位は2種類から選択可能:
+// キーワードの単位は3種類から選択可能:
 //   ・OpenAlexトピック方式: openalex.works.topics（OpenAlexが論文に自動付与
 //     する研究トピック分類タグ）を使用。集計はSQL側（RPC: detect_keyword_bursts）
 //     で行うため全社横断でも高速。
-//   ・フリーテキスト方式: title/abstractから簡易頻度集計でキーワードを独自抽出
-//     （既存の「🏷️ キーワード」タブの簡易抽出ロジックを時系列対応させたもの）。
-//     RPC: get_papers_for_burst_text で対象論文の本文を取得し、集計・バースト
-//     スコア計算はこのコンポーネント内（クライアント側）で行う。データ量の
-//     都合上、全社横断では使用不可（企業を1社指定する必要がある）。
+//   ・フリーテキスト簡易抽出: title/abstractから簡易頻度集計でキーワードを
+//     独自抽出（既存の「🏷️ キーワード」タブの簡易抽出ロジックを時系列対応
+//     させたもの）。企業1社指定が必須。
+//   ・フリーテキストAI抽出: title/abstractをClaudeに渡し、論文ごとに技術的に
+//     意味のあるキーワードを抽出させる。簡易抽出より質が高いが、論文数に応じて
+//     Claude API呼び出しが発生するため時間とコストがかかる。企業1社指定が必須。
+//
+// いずれも RPC: get_papers_for_burst_text で対象論文の本文（title/abstract/
+// 発行月）を取得し、キーワード抽出・月次集計・バーストスコア計算は
+// このコンポーネント内（クライアント側）で行う。
 // =============================================================================
 
-// 英語ストップワード（KeywordsTabと同じリスト）
+// 英語ストップワード（KeywordsTabと同じリスト。簡易抽出モードで使用）
 const STOP_WORDS = new Set([
   "a","an","the","and","or","of","in","for","to","with","on","at","by","from",
   "is","are","be","been","being","was","were","has","have","had","do","does","did",
@@ -52,6 +57,47 @@ function extractKeywordSet(text) {
 
 function monthKey(d) { return d.toISOString().slice(0, 7); }
 
+// 直近nRecentヶ月／ベースラインnBaselineヶ月の月キー一覧を作る
+function buildMonthWindows(nRecent, nBaseline) {
+  const now = new Date();
+  const recentMonths = [];
+  for (let i = 0; i < nRecent; i++) recentMonths.push(monthKey(new Date(now.getFullYear(), now.getMonth() - i, 1)));
+  const baselineMonths = [];
+  for (let i = nRecent; i < nRecent + nBaseline; i++) baselineMonths.push(monthKey(new Date(now.getFullYear(), now.getMonth() - i, 1)));
+  return {
+    allMonths: [...baselineMonths, ...recentMonths].sort(),
+    recentSet: new Set(recentMonths),
+    baselineSet: new Set(baselineMonths),
+  };
+}
+
+// keyword -> {month: count} のマップから、バーストスコア付きの行配列を作る（共通集計ロジック）
+function buildBurstRows(monthly, nRecent, nBaseline, nMin, nTop) {
+  const { allMonths, recentSet, baselineSet } = buildMonthWindows(nRecent, nBaseline);
+  const rows = [];
+  for (const [kw, byMonth] of Object.entries(monthly)) {
+    let recent = 0, baseline = 0;
+    for (const m of recentSet) recent += byMonth[m] || 0;
+    for (const m of baselineSet) baseline += byMonth[m] || 0;
+    if (recent < nMin) continue;
+    const recentAvg = recent / nRecent;
+    const baselineAvg = baseline / nBaseline;
+    const burstScore = recentAvg / (baselineAvg + 0.5);
+    const growthPct = (100 * (recentAvg - baselineAvg)) / (baselineAvg + 0.5);
+    rows.push({
+      topic: kw, field: null, domain: null,
+      recent_count: recent, baseline_count: baseline,
+      recent_avg_monthly: Math.round(recentAvg * 100) / 100,
+      baseline_avg_monthly: Math.round(baselineAvg * 100) / 100,
+      burst_score: Math.round(burstScore * 100) / 100,
+      growth_pct: Math.round(growthPct * 10) / 10,
+      monthly_series: allMonths.map(m => ({ month: m, count: byMonth[m] || 0 })),
+    });
+  }
+  rows.sort((a, b) => b.burst_score - a.burst_score || b.recent_count - a.recent_count);
+  return rows.slice(0, nTop);
+}
+
 function Sparkline({ series, width = 150, height = 34, color }) {
   if (!series || series.length < 2) {
     return <div style={{ fontSize: 10, color: "#666" }}>データ不足</div>;
@@ -69,8 +115,11 @@ function Sparkline({ series, width = 150, height = 34, color }) {
   );
 }
 
-export default function BurstDetector({ supabaseUrl, supabaseKey, companies, c, card }) {
-  const [keywordMode, setKeywordMode] = useState("topic"); // topic | freetext
+const AI_MAX_PAPERS = 600; // AI抽出モードでのコスト・時間の上限（直近優先で切り詰め）
+const AI_BATCH_SIZE = 25;
+
+export default function BurstDetector({ supabaseUrl, supabaseKey, claudePost, companies, c, card }) {
+  const [keywordMode, setKeywordMode] = useState("topic"); // topic | freetext | ai
   const [companySlug, setCompanySlug] = useState("");
   const [monthsRecent, setMonthsRecent] = useState(3);
   const [monthsBaseline, setMonthsBaseline] = useState(12);
@@ -79,11 +128,13 @@ export default function BurstDetector({ supabaseUrl, supabaseKey, companies, c, 
   const [loading, setLoading] = useState(false);
   const [loadingNote, setLoadingNote] = useState("");
   const [err, setErr] = useState("");
+  const [note, setNote] = useState("");
   const [results, setResults] = useState([]);
   const [ranAt, setRanAt] = useState(null);
   const [ranMode, setRanMode] = useState(null);
 
   const GROUP_LABELS = { group_west: "欧米", group_china: "中国", group_japan: "日本", group_beauty: "化粧品" };
+  const MODE_LABELS = { topic: "OpenAlexトピック方式", freetext: "フリーテキスト簡易抽出", ai: "フリーテキストAI抽出" };
 
   const growthColor = (row) => {
     if (row.baseline_count === 0) return "#f87171"; // 新出（ベースライン実質ゼロ）
@@ -113,7 +164,26 @@ export default function BurstDetector({ supabaseUrl, supabaseKey, companies, c, 
     return Array.isArray(data) ? data : [];
   };
 
-  // ---- フリーテキスト方式（本文取得→クライアント側で集計・バースト計算） ----
+  // 対象論文（title/abstract/発行月）をRPCから取得。フリーテキスト系2モードで共通利用
+  const fetchPapersForFreeText = async () => {
+    const res = await fetch(`${supabaseUrl}/rest/v1/rpc/get_papers_for_burst_text`, {
+      method: "POST",
+      headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        p_company_slug: companySlug || null,
+        p_months_recent: Number(monthsRecent) || 3,
+        p_months_baseline: Number(monthsBaseline) || 12,
+      }),
+    });
+    if (!res.ok) {
+      const t = await res.text().catch(() => "");
+      throw new Error(`HTTP ${res.status}: ${t.slice(0, 200)}`);
+    }
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  };
+
+  // ---- フリーテキスト簡易抽出（クライアント側で頻度集計） ----
   const detectByFreeText = async () => {
     const nRecent = Number(monthsRecent) || 3;
     const nBaseline = Number(monthsBaseline) || 12;
@@ -121,35 +191,10 @@ export default function BurstDetector({ supabaseUrl, supabaseKey, companies, c, 
     const nTop = Number(topN) || 30;
 
     setLoadingNote("対象論文を取得中...");
-    const res = await fetch(`${supabaseUrl}/rest/v1/rpc/get_papers_for_burst_text`, {
-      method: "POST",
-      headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        p_company_slug: companySlug || null,
-        p_months_recent: nRecent,
-        p_months_baseline: nBaseline,
-      }),
-    });
-    if (!res.ok) {
-      const t = await res.text().catch(() => "");
-      throw new Error(`HTTP ${res.status}: ${t.slice(0, 200)}`);
-    }
-    const papers = await res.json();
-    if (!Array.isArray(papers) || papers.length === 0) return [];
+    const papers = await fetchPapersForFreeText();
+    if (papers.length === 0) return [];
 
     setLoadingNote(`${papers.length}件の論文からキーワードを抽出中...`);
-
-    // 月キー一覧（直近nRecentヶ月、ベースラインnBaselineヶ月）
-    const now = new Date();
-    const recentMonths = [];
-    for (let i = 0; i < nRecent; i++) recentMonths.push(monthKey(new Date(now.getFullYear(), now.getMonth() - i, 1)));
-    const baselineMonths = [];
-    for (let i = nRecent; i < nRecent + nBaseline; i++) baselineMonths.push(monthKey(new Date(now.getFullYear(), now.getMonth() - i, 1)));
-    const allMonths = [...baselineMonths, ...recentMonths].sort();
-    const recentSet = new Set(recentMonths);
-    const baselineSet = new Set(baselineMonths);
-
-    // keyword -> { month: count }
     const monthly = {};
     for (const p of papers) {
       if (!p.pub_month) continue;
@@ -159,39 +204,83 @@ export default function BurstDetector({ supabaseUrl, supabaseKey, companies, c, 
         monthly[kw][p.pub_month] = (monthly[kw][p.pub_month] || 0) + 1;
       }
     }
+    return buildBurstRows(monthly, nRecent, nBaseline, nMin, nTop);
+  };
 
-    const rows = [];
-    for (const [kw, byMonth] of Object.entries(monthly)) {
-      let recent = 0, baseline = 0;
-      for (const m of recentSet) recent += byMonth[m] || 0;
-      for (const m of baselineSet) baseline += byMonth[m] || 0;
-      if (recent < nMin) continue;
-      const recentAvg = recent / nRecent;
-      const baselineAvg = baseline / nBaseline;
-      const burstScore = recentAvg / (baselineAvg + 0.5);
-      const growthPct = (100 * (recentAvg - baselineAvg)) / (baselineAvg + 0.5);
-      rows.push({
-        topic: kw, field: null, domain: null,
-        recent_count: recent, baseline_count: baseline,
-        recent_avg_monthly: Math.round(recentAvg * 100) / 100,
-        baseline_avg_monthly: Math.round(baselineAvg * 100) / 100,
-        burst_score: Math.round(burstScore * 100) / 100,
-        growth_pct: Math.round(growthPct * 10) / 10,
-        monthly_series: allMonths.map(m => ({ month: m, count: byMonth[m] || 0 })),
-      });
+  // ---- フリーテキストAI抽出（Claudeでバッチごとにキーワード抽出） ----
+  const detectByAI = async () => {
+    if (!claudePost) throw new Error("Claude APIが利用できません（claudePostが未設定）");
+    const nRecent = Number(monthsRecent) || 3;
+    const nBaseline = Number(monthsBaseline) || 12;
+    const nMin = Number(minRecent) || 5;
+    const nTop = Number(topN) || 30;
+
+    setLoadingNote("対象論文を取得中...");
+    let papers = await fetchPapersForFreeText();
+    if (papers.length === 0) return [];
+
+    if (papers.length > AI_MAX_PAPERS) {
+      papers = papers.slice(0, AI_MAX_PAPERS); // RPCは発行日降順のため、直近優先で切り詰め
+      setNote(`論文数が多いため直近${AI_MAX_PAPERS}件のみAI抽出しました。`);
+    } else {
+      setNote("");
     }
-    rows.sort((a, b) => b.burst_score - a.burst_score || b.recent_count - a.recent_count);
-    return rows.slice(0, nTop);
+
+    const batches = [];
+    for (let i = 0; i < papers.length; i += AI_BATCH_SIZE) batches.push(papers.slice(i, i + AI_BATCH_SIZE));
+
+    const monthly = {};
+    for (let b = 0; b < batches.length; b++) {
+      setLoadingNote(`AIでキーワード抽出中... (${b + 1}/${batches.length}バッチ)`);
+      const batch = batches[b];
+      const list = batch.map((p, i) => {
+        const abs = (p.abstract_text || "").split(/\s+/).slice(0, 100).join(" ");
+        return `${i + 1}. ${p.title || "(no title)"} — ${abs}`;
+      }).join("\n");
+      const prompt =
+        "Extract up to 5 specific technical/research keywords or short key phrases (2-4 words) for EACH paper below. " +
+        "Focus on concrete technologies, methods, materials, or concepts. Skip generic words like \"method\", \"system\", \"analysis\", \"study\", \"approach\".\n\n" +
+        "Reply ONLY in this exact format, one line per keyword, no extra commentary or headers:\n<paper_number>|<keyword>\n\n" +
+        "Papers:\n" + list;
+
+      let text = "";
+      try {
+        text = await claudePost(prompt, 3000);
+      } catch (e) {
+        console.warn("AIキーワード抽出バッチ失敗 (batch " + b + "):", e.message);
+      }
+
+      const seenPerPaper = batch.map(() => new Set());
+      text.split("\n").forEach(line => {
+        const m = line.match(/^\s*(\d+)\s*\|\s*(.+?)\s*$/);
+        if (!m) return;
+        const idx = parseInt(m[1], 10) - 1;
+        if (idx < 0 || idx >= batch.length) return;
+        const kw = m[2].toLowerCase().trim().replace(/^["'*-]+|["'*-]+$/g, "");
+        if (!kw || kw.length < 3 || seenPerPaper[idx].has(kw)) return;
+        seenPerPaper[idx].add(kw);
+        const month = batch[idx].pub_month;
+        if (!month) return;
+        if (!monthly[kw]) monthly[kw] = {};
+        monthly[kw][month] = (monthly[kw][month] || 0) + 1;
+      });
+
+      if (b < batches.length - 1) await new Promise(r => setTimeout(r, 500));
+    }
+
+    return buildBurstRows(monthly, nRecent, nBaseline, nMin, nTop);
   };
 
   const doDetect = async () => {
-    if (keywordMode === "freetext" && !companySlug) {
+    if ((keywordMode === "freetext" || keywordMode === "ai") && !companySlug) {
       setErr("フリーテキスト方式は企業を1社指定してください（全社横断は非対応）。");
       return;
     }
-    setLoading(true); setErr(""); setResults([]); setLoadingNote("");
+    setLoading(true); setErr(""); setNote(""); setResults([]); setLoadingNote("");
     try {
-      const data = keywordMode === "topic" ? await detectByTopic() : await detectByFreeText();
+      const data = keywordMode === "topic" ? await detectByTopic()
+        : keywordMode === "freetext" ? await detectByFreeText()
+        : await detectByAI();
       setResults(data);
       setRanAt(new Date());
       setRanMode(keywordMode);
@@ -217,6 +306,12 @@ export default function BurstDetector({ supabaseUrl, supabaseKey, companies, c, 
     link.click();
   };
 
+  const footerNote = {
+    topic: "※「キーワード」は OpenAlex が論文に付与する研究トピック分類タグ（上位5件/論文）を使用しています。",
+    freetext: "※ title/abstract の英単語・2語連結（2-gram）を簡易頻度集計したものです。ストップワードは除外していますが、AI抽出に比べると粒度は粗めです。",
+    ai: `※ title/abstractをClaudeに渡し、論文ごとに技術的キーワードを抽出しています。論文数に応じてAPI呼び出しが発生するため時間がかかります（最大${AI_MAX_PAPERS}件まで、直近優先）。`,
+  }[keywordMode];
+
   return (
     <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
       {/* ===== 左パネル: 条件設定 ===== */}
@@ -229,6 +324,7 @@ export default function BurstDetector({ supabaseUrl, supabaseKey, companies, c, 
             style={{ width: "100%", padding: "7px 8px", borderRadius: 7, border: "1px solid " + c.border, background: c.bg2, color: c.text, fontSize: 12, cursor: "pointer", boxSizing: "border-box" }}>
             <option value="topic">OpenAlexトピック（全社横断可・高速）</option>
             <option value="freetext">フリーテキスト簡易抽出（企業1社指定必須）</option>
+            <option value="ai">フリーテキストAI抽出（企業1社指定必須・低速）</option>
           </select>
         </div>
 
@@ -243,7 +339,7 @@ export default function BurstDetector({ supabaseUrl, supabaseKey, companies, c, 
               </optgroup>
             ))}
           </select>
-          {keywordMode === "freetext" && !companySlug && (
+          {keywordMode !== "topic" && !companySlug && (
             <div style={{ fontSize: 9, color: "#f87171", marginTop: 4 }}>フリーテキスト方式では企業を選択してください</div>
           )}
         </div>
@@ -287,15 +383,14 @@ export default function BurstDetector({ supabaseUrl, supabaseKey, companies, c, 
         )}
 
         <div style={{ borderTop: "1px solid " + c.border, marginTop: 12, paddingTop: 10, fontSize: 10, color: c.muted, lineHeight: 1.8 }}>
-          {keywordMode === "topic"
-            ? "※「キーワード」は OpenAlex が論文に付与する研究トピック分類タグ（上位5件/論文）を使用しています。"
-            : "※ title/abstract の英単語・2語連結（2-gram）を簡易頻度集計したものです。ストップワードは除外していますが、AI抽出に比べると粒度は粗めです。"}
+          {footerNote}
         </div>
       </div>
 
       {/* ===== 右: 結果 ===== */}
       <div style={{ flex: 1, overflowY: "auto", padding: "10px 16px" }}>
         {err && <div style={{ padding: "8px 12px", background: "#1a1000", borderRadius: 6, fontSize: 11, color: c.amber, marginBottom: 10 }}>{err}</div>}
+        {note && <div style={{ padding: "8px 12px", background: "#0c2d42", borderRadius: 6, fontSize: 11, color: c.cyan, marginBottom: 10 }}>{note}</div>}
 
         {!loading && results.length === 0 && !err && (
           <div style={{ padding: 60, textAlign: "center", color: c.muted, fontSize: 14 }}>
@@ -305,7 +400,7 @@ export default function BurstDetector({ supabaseUrl, supabaseKey, companies, c, 
 
         {ranAt && (
           <div style={{ fontSize: 11, color: c.muted, marginBottom: 12 }}>
-            {results.length}件検出 ／ {ranMode === "topic" ? "OpenAlexトピック方式" : "フリーテキスト方式"} ／
+            {results.length}件検出 ／ {MODE_LABELS[ranMode] || ranMode} ／
             直近{monthsRecent}ヶ月 vs ベースライン{monthsBaseline}ヶ月 ／ 実行: {ranAt.toLocaleString("ja-JP")}
           </div>
         )}
