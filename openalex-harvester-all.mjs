@@ -12,6 +12,7 @@
 //
 // オプション:
 //   SKIP_UNTIL=google    → 指定slugまでスキップ(中断再開用)
+//   ONLY_SLUGS=apple,microsoft,meta  → 指定したslugだけ再取得(部分修正の再ハーベスト用)
 //   YEAR_FROM=2022       → 開始年(デフォルト2022)
 //   YEAR_TO=2026         → 終了年(デフォルト2026)
 // =============================================================================
@@ -19,6 +20,7 @@
 const YEAR_FROM = parseInt(process.env.YEAR_FROM || "2022");
 const YEAR_TO   = parseInt(process.env.YEAR_TO   || "2026");
 const SKIP_UNTIL = process.env.SKIP_UNTIL || "";
+const ONLY_SLUGS = (process.env.ONLY_SLUGS || "").split(",").map(s => s.trim()).filter(Boolean);
 const OA_BASE   = "https://api.openalex.org";
 const OA_KEY    = process.env.OPENALEX_API_KEY || "";
 const OA_DELAY  = 150;
@@ -174,10 +176,17 @@ async function main() {
   console.log(`期間: ${YEAR_FROM}-${YEAR_TO}`);
   console.log(`API key: ${OA_KEY ? "あり" : "なし"}`);
   if (SKIP_UNTIL) console.log(`スキップ: ${SKIP_UNTIL} まで`);
+  if (ONLY_SLUGS.length) console.log(`対象を限定: ${ONLY_SLUGS.join(", ")}`);
   console.log();
   if (!SB_KEY) { console.error("SUPABASE_SERVICE_ROLE_KEY 未設定"); process.exit(1); }
 
-  const companies = await loadCrosswalk();
+  let companies = await loadCrosswalk();
+  if (ONLY_SLUGS.length) {
+    const onlySet = new Set(ONLY_SLUGS);
+    companies = companies.filter(co => onlySet.has(co.canonical_slug));
+    const found = new Set(companies.map(co => co.canonical_slug));
+    for (const s of ONLY_SLUGS) if (!found.has(s)) console.warn(`  [WARN] ONLY_SLUGSに指定された "${s}" がcrosswalkに見つかりません`);
+  }
   console.log(`対象: ${companies.length}社\n`);
 
   let grandFetched = 0, grandInserted = 0;
