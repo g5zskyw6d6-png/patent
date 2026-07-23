@@ -31,9 +31,9 @@
 -- =============================================================================
 
 -- パフォーマンス用インデックス（未作成の場合のみ）
--- ※ openalex.works.publication_date は text 型のため、キャスト式に対する関数インデックスを作成
-CREATE INDEX IF NOT EXISTS idx_works_publication_date ON openalex.works ((publication_date::date));
-CREATE INDEX IF NOT EXISTS idx_work_companies_slug     ON openalex.work_companies (company_slug);
+-- ※ publication_date::date のキャストは STABLE（DateStyleに依存）のため、
+--   関数インデックスには使えない（IMMUTABLE制約）。件数的にも不要なため省略。
+CREATE INDEX IF NOT EXISTS idx_work_companies_slug ON openalex.work_companies (company_slug);
 
 CREATE OR REPLACE FUNCTION public.detect_keyword_bursts(
   p_company_slug    text DEFAULT NULL,
