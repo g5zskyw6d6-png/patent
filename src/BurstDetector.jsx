@@ -115,8 +115,8 @@ function Sparkline({ series, width = 150, height = 34, color }) {
   );
 }
 
-const AI_MAX_PAPERS = 600; // AI抽出モードでのコスト・時間の上限（直近優先で切り詰め）
-const AI_BATCH_SIZE = 25;
+const AI_MAX_PAPERS = 5000; // AI抽出モードの安全上限（企業単位なら通常ここに達しない。直近優先で切り詰め）
+const AI_BATCH_SIZE = 60;   // titleのみ渡すため大きめのバッチサイズにできる
 
 export default function BurstDetector({ supabaseUrl, supabaseKey, claudePost, companies, c, card }) {
   const [keywordMode, setKeywordMode] = useState("topic"); // topic | freetext | ai
@@ -233,19 +233,19 @@ export default function BurstDetector({ supabaseUrl, supabaseKey, claudePost, co
     for (let b = 0; b < batches.length; b++) {
       setLoadingNote(`AIでキーワード抽出中... (${b + 1}/${batches.length}バッチ)`);
       const batch = batches[b];
-      const list = batch.map((p, i) => {
-        const abs = (p.abstract_text || "").split(/\s+/).slice(0, 100).join(" ");
-        return `${i + 1}. ${p.title || "(no title)"} — ${abs}`;
-      }).join("\n");
+      // タイトルのみを渡す（abstractなし）。バッチサイズを大きくして呼び出し回数を抑え、
+      // より多くの論文をカバーすることを優先している。
+      const list = batch.map((p, i) => `${i + 1}. ${p.title || "(no title)"}`).join("\n");
       const prompt =
-        "Extract up to 5 specific technical/research keywords or short key phrases (2-4 words) for EACH paper below. " +
-        "Focus on concrete technologies, methods, materials, or concepts. Skip generic words like \"method\", \"system\", \"analysis\", \"study\", \"approach\".\n\n" +
+        "Extract up to 4 specific technical/research keywords or short key phrases (2-4 words) for EACH paper title below. " +
+        "Focus on concrete technologies, methods, materials, or concepts. Skip generic words like \"method\", \"system\", \"analysis\", \"study\", \"approach\". " +
+        "Titles are short, so infer the most likely technical terms even with limited context.\n\n" +
         "Reply ONLY in this exact format, one line per keyword, no extra commentary or headers:\n<paper_number>|<keyword>\n\n" +
-        "Papers:\n" + list;
+        "Paper titles:\n" + list;
 
       let text = "";
       try {
-        text = await claudePost(prompt, 3000);
+        text = await claudePost(prompt, 6000);
       } catch (e) {
         console.warn("AIキーワード抽出バッチ失敗 (batch " + b + "):", e.message);
       }
@@ -309,7 +309,7 @@ export default function BurstDetector({ supabaseUrl, supabaseKey, claudePost, co
   const footerNote = {
     topic: "※「キーワード」は OpenAlex が論文に付与する研究トピック分類タグ（上位5件/論文）を使用しています。",
     freetext: "※ title/abstract の英単語・2語連結（2-gram）を簡易頻度集計したものです。ストップワードは除外していますが、AI抽出に比べると粒度は粗めです。",
-    ai: `※ title/abstractをClaudeに渡し、論文ごとに技術的キーワードを抽出しています。論文数に応じてAPI呼び出しが発生するため時間がかかります（最大${AI_MAX_PAPERS}件まで、直近優先）。`,
+    ai: `※ titleのみをClaudeに渡し（abstractは使用せず）、論文ごとに技術的キーワードを抽出しています。企業全件を対象にできますが（最大${AI_MAX_PAPERS.toLocaleString()}件、直近優先）、abstractを使う場合よりキーワードの精度は落ちる可能性があります。`,
   }[keywordMode];
 
   return (
