@@ -7,6 +7,10 @@
 --   スコアが高くなるよう、ベースライン期間の平均出現数に平滑化項(+0.5)を
 --   加えた比率をバーストスコアとしている。
 --
+--   monthly_series には期間内の全ての月を含める（出現が0件の月も0として
+--   埋める）。これにより画面のスパークラインが等間隔の月次推移として
+--   正しく描画される（フリーテキスト系モードと表現を統一）。
+--
 -- キーワードの単位について:
 --   OpenAlexが論文ごとに付与する上位5件の topics（研究トピック分類タグ、
 --   例: "Generative Adversarial Networks", "Solid-State Batteries" 等）を
@@ -89,41 +93,66 @@ AS $$
     FROM base
     GROUP BY topic, field, domain, month
   ),
-  agg AS (
+  topic_meta AS (
     SELECT
       m.topic,
       max(m.field)  AS field,
       max(m.domain) AS domain,
       sum(CASE WHEN m.month >= b.recent_start THEN m.cnt ELSE 0 END) AS recent_count,
-      sum(CASE WHEN m.month <  b.recent_start THEN m.cnt ELSE 0 END) AS baseline_count,
-      jsonb_agg(
-        jsonb_build_object('month', to_char(m.month,'YYYY-MM'), 'count', m.cnt)
-        ORDER BY m.month
-      ) AS monthly_series
+      sum(CASE WHEN m.month <  b.recent_start THEN m.cnt ELSE 0 END) AS baseline_count
     FROM monthly m
     CROSS JOIN bounds b
     GROUP BY m.topic
+  ),
+  -- 先に上位N件まで絞り込んでから月次系列を作る（全トピック分の月展開を避けるため）
+  top_topics AS (
+    SELECT
+      topic, field, domain, recent_count, baseline_count,
+      round(recent_count::numeric   / greatest(p_months_recent,1), 2)   AS recent_avg_monthly,
+      round(baseline_count::numeric / greatest(p_months_baseline,1), 2) AS baseline_avg_monthly,
+      round(
+        (recent_count::numeric / greatest(p_months_recent,1)) /
+        ((baseline_count::numeric / greatest(p_months_baseline,1)) + 0.5)
+      , 2) AS burst_score,
+      round(
+        100 * (
+          (recent_count::numeric / greatest(p_months_recent,1))
+          - (baseline_count::numeric / greatest(p_months_baseline,1))
+        ) / ((baseline_count::numeric / greatest(p_months_baseline,1)) + 0.5)
+      , 1) AS growth_pct
+    FROM topic_meta
+    WHERE recent_count >= p_min_recent
+    ORDER BY burst_score DESC, recent_count DESC
+    LIMIT greatest(p_top_n,1)
+  ),
+  -- 期間内の全ての月（0件の月も含む）を列挙し、上位トピックとクロスして
+  -- 出現がなかった月は0件として埋める。これでフロント側のスパークラインが
+  -- 全モードで「等間隔・0件月も表示」に統一される。
+  months AS (
+    SELECT generate_series(b.baseline_start::timestamp, b.this_month::timestamp, interval '1 month')::date AS month
+    FROM bounds b
+  ),
+  series AS (
+    SELECT
+      tt.topic,
+      jsonb_agg(
+        jsonb_build_object('month', to_char(mo.month,'YYYY-MM'), 'count', COALESCE(mn.cnt,0))
+        ORDER BY mo.month
+      ) AS monthly_series
+    FROM top_topics tt
+    CROSS JOIN months mo
+    LEFT JOIN monthly mn ON mn.topic = tt.topic AND mn.month = mo.month
+    GROUP BY tt.topic
   )
   SELECT
-    topic, field, domain,
-    recent_count, baseline_count,
-    round(recent_count::numeric   / greatest(p_months_recent,1), 2)   AS recent_avg_monthly,
-    round(baseline_count::numeric / greatest(p_months_baseline,1), 2) AS baseline_avg_monthly,
-    round(
-      (recent_count::numeric / greatest(p_months_recent,1)) /
-      ((baseline_count::numeric / greatest(p_months_baseline,1)) + 0.5)
-    , 2) AS burst_score,
-    round(
-      100 * (
-        (recent_count::numeric / greatest(p_months_recent,1))
-        - (baseline_count::numeric / greatest(p_months_baseline,1))
-      ) / ((baseline_count::numeric / greatest(p_months_baseline,1)) + 0.5)
-    , 1) AS growth_pct,
-    monthly_series
-  FROM agg
-  WHERE recent_count >= p_min_recent
-  ORDER BY burst_score DESC, recent_count DESC
-  LIMIT greatest(p_top_n,1);
+    tt.topic, tt.field, tt.domain,
+    tt.recent_count, tt.baseline_count,
+    tt.recent_avg_monthly, tt.baseline_avg_monthly,
+    tt.burst_score, tt.growth_pct,
+    s.monthly_series
+  FROM top_topics tt
+  JOIN series s ON s.topic = tt.topic
+  ORDER BY tt.burst_score DESC, tt.recent_count DESC;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.detect_keyword_bursts(text,int,int,int,int) TO anon, authenticated;
