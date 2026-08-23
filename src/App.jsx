@@ -103,16 +103,18 @@ async function fetchPatents(legalNames, from, to) {
   const paClause = names.map(n => `pa="${n}"`).join(" OR ");
   const cql     = `(${paClause}) AND pd within "${fromEPO},${toEPO}" AND (${TARGET_COUNTRIES.map(c=>"pn="+c).join(" OR ")})`;
   const headers = { "Authorization":"Bearer "+token, "Accept":"application/xml" };
-  const endpoint = "/api/epo/published-data/search/biblio,abstract";
+  // ★ /api/epo/[...path] の動的キャッチオールルートがVercel上で機能しないため、
+  //    静的な /api/epo-proxy?path=... 経由に変更（2026/8 対応）
+  const endpoint = "/api/epo-proxy?path=" + encodeURIComponent("published-data/search/biblio,abstract");
   const parser  = new DOMParser();
-  const first   = await fetch(endpoint+"?q="+encodeURIComponent(cql)+"&Range=1-100", {headers});
+  const first   = await fetch(endpoint+"&q="+encodeURIComponent(cql)+"&Range=1-100", {headers});
   if (!first.ok) { const txt=await first.text(); throw new Error("EPO検索失敗 ("+first.status+"): "+txt.slice(0,300)); }
   const firstDoc   = parser.parseFromString(await first.text(), "application/xml");
   const total      = parseInt(firstDoc.querySelector("biblio-search")?.getAttribute("total-result-count")||"0", 10);
   const allPatents = parseXMLPatents(firstDoc);
   for (let page=2; page<=Math.ceil(Math.min(total,2000)/100); page++) {
     const start=(page-1)*100+1, end=Math.min(page*100, Math.min(total,2000));
-    const res = await fetch(endpoint+"?q="+encodeURIComponent(cql)+"&Range="+start+"-"+end, {headers});
+    const res = await fetch(endpoint+"&q="+encodeURIComponent(cql)+"&Range="+start+"-"+end, {headers});
     if (!res.ok) break;
     allPatents.push(...parseXMLPatents(parser.parseFromString(await res.text(),"application/xml")));
     await new Promise(r=>setTimeout(r,300));

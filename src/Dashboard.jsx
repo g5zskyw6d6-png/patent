@@ -399,11 +399,13 @@ export default function Dashboard({ supabaseUrl, supabaseKey, claudeApiKey, epoC
       });
       return paras.length > 0 ? paras.join("\n\n") : null;
     };
+    // ★ /api/epo/[...path] の動的キャッチオールルートがVercel上で機能しないため、
+    //    静的な /api/epo-proxy?path=... 経由に変更（2026/8 対応）
     for (const id of buildEpodocCandidates(patent)) {
-      try { const t = await parse(await fetch("/api/epo/published-data/publication/epodoc/"+encodeURIComponent(id)+"/description",{headers})); if (t) return { text:t, id, format:"epodoc" }; } catch(e) {}
+      try { const t = await parse(await fetch("/api/epo-proxy?path="+encodeURIComponent("published-data/publication/epodoc/"+id+"/description"),{headers})); if (t) return { text:t, id, format:"epodoc" }; } catch(e) {}
     }
     for (const id of buildDocdbCandidates(patent)) {
-      try { const t = await parse(await fetch("/api/epo/published-data/publication/docdb/"+encodeURIComponent(id)+"/description",{headers})); if (t) return { text:t, id, format:"docdb" }; } catch(e) {}
+      try { const t = await parse(await fetch("/api/epo-proxy?path="+encodeURIComponent("published-data/publication/docdb/"+id+"/description"),{headers})); if (t) return { text:t, id, format:"docdb" }; } catch(e) {}
     }
     throw new Error("説明文取得失敗");
   }, [getEPOToken]);
@@ -425,11 +427,13 @@ export default function Dashboard({ supabaseUrl, supabaseKey, claudeApiKey, epoC
       });
       return all.length > 0 ? { allClaims:all.join("\n\n"), independentClaims:indep.join("\n\n") } : null;
     };
+    // ★ /api/epo/[...path] の動的キャッチオールルートがVercel上で機能しないため、
+    //    静的な /api/epo-proxy?path=... 経由に変更（2026/8 対応）
     for (const id of buildEpodocCandidates(patent)) {
-      try { const r = await parse(await fetch("/api/epo/published-data/publication/epodoc/"+encodeURIComponent(id)+"/claims",{headers})); if (r) return { ...r, id, format:"epodoc" }; } catch(e) {}
+      try { const r = await parse(await fetch("/api/epo-proxy?path="+encodeURIComponent("published-data/publication/epodoc/"+id+"/claims"),{headers})); if (r) return { ...r, id, format:"epodoc" }; } catch(e) {}
     }
     for (const id of buildDocdbCandidates(patent)) {
-      try { const r = await parse(await fetch("/api/epo/published-data/publication/docdb/"+encodeURIComponent(id)+"/claims",{headers})); if (r) return { ...r, id, format:"docdb" }; } catch(e) {}
+      try { const r = await parse(await fetch("/api/epo-proxy?path="+encodeURIComponent("published-data/publication/docdb/"+id+"/claims"),{headers})); if (r) return { ...r, id, format:"docdb" }; } catch(e) {}
     }
     throw new Error("請求項取得失敗");
   }, [getEPOToken]);
