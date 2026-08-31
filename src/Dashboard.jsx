@@ -118,6 +118,330 @@ function generatePortfolioHTML(company, analysis, dbMeta) {
   `;
 }
 
+/* ━━━ 一括分析（複数企業 × 複数キーワード）用：単発分析ロジックの純粋関数版 ━━━
+   doAnalyzeResults（コンポーネント内・UI状態に依存）と同じ処理を、
+   UI状態を持たない形で切り出したもの。バッチ実行のループから直接呼び出す。 */
+async function runOneAnalysisPure({ companyId, companyName, keyword, dateFrom, dateTo, sbRpc, claudePost, sbSaveAnalysis }) {
+  const filterDesc = "企業: " + companyName + ' / キーワード: "' + keyword + '" / 期間: ' + (dateFrom || "") + " 〜 " + (dateTo || "");
+
+  const allPatents = await sbRpc("search_patents", {
+    keyword:     keyword.trim() || null,
+    inventor:    null,
+    company_ids: companyId ? [companyId] : null,
+    countries:   null,
+    from_date:   dateFrom || null,
+    to_date:     dateTo   || null,
+    page_offset: 0,
+    page_limit:  99999,
+  }) || [];
+
+  if (allPatents.length === 0) {
+    return { filterDesc, totalCount: 0, categories: [], trends: [], impact2050: "", strategic: "", topPatent: "" };
+  }
+
+  const BATCH_SIZE = 100, ABSTRACT_WORDS = 80, CLAIMS_WORDS = 50, BATCH_TOKENS = 1200, SYNTH_TOKENS = 2000;
+  const batches = [];
+  for (let i = 0; i < allPatents.length; i += BATCH_SIZE) batches.push(allPatents.slice(i, i + BATCH_SIZE));
+  const totalBatches = batches.length;
+  const batchResults = [];
+  const limitWords = (text, maxWords) => !text ? "" : text.split(/\s+/).slice(0, maxWords).join(" ");
+
+  for (let b = 0; b < totalBatches; b++) {
+    const batch = batches[b];
+    const list = batch.map((p, i) => {
+      let e = (i+1)+". ["+p.country+"] "+p.title_en+" ("+p.publication_date+")";
+      if (p.company_name) e += " — "+p.company_name;
+      if (p.abstract_epo)       e += "\n   Abstract: "  + limitWords(p.abstract_epo, ABSTRACT_WORDS);
+      if (p.claims_independent) e += "\n   Key Claim: " + limitWords(p.claims_independent, CLAIMS_WORDS);
+      return e;
+    }).join("\n");
+
+    const batchText = await claudePost(
+      "You are a patent analyst. Analyze this batch and extract key technology patterns. Reply ONLY in this exact format:\n"
+      +"BCAT1:category name|percentage|one line description\n"
+      +"BCAT2:category name|percentage|one line description\n"
+      +"BCAT3:category name|percentage|one line description\n"
+      +"BCAT4:category name|percentage|one line description\n"
+      +"BCAT5:category name|percentage|one line description\n"
+      +"BTREND1:trend title|2 sentence explanation in Japanese\n"
+      +"BTREND2:trend title|2 sentence explanation in Japanese\n"
+      +"BTREND3:trend title|2 sentence explanation in Japanese\n"
+      +"BNOTABLE:notable patent title and innovation in Japanese (2 sentences)\n\n"
+      +"Batch "+(b+1)+"/"+totalBatches+" ("+batch.length+" of "+allPatents.length+" patents):\n"+list
+      , BATCH_TOKENS
+    );
+
+    const getV = p => { const l = batchText.split("\n").find(l => l.startsWith(p)); return l ? l.slice(p.length).trim() : ""; };
+    const parseBar = p => { const pts = getV(p).split("|"); return { name:pts[0]||"", pct:parseInt(pts[1]||"0",10), desc:pts[2]||"" }; };
+    const parseTrend = p => { const v = getV(p); const i = v.indexOf("|"); return { title:i>=0?v.slice(0,i):v, body:i>=0?v.slice(i+1):"" }; };
+
+    batchResults.push({
+      batchNum:   b + 1,
+      count:      batch.length,
+      categories: [parseBar("BCAT1:"),parseBar("BCAT2:"),parseBar("BCAT3:"),parseBar("BCAT4:"),parseBar("BCAT5:")].filter(c=>c.name),
+      trends:     [parseTrend("BTREND1:"),parseTrend("BTREND2:"),parseTrend("BTREND3:")].filter(t=>t.title),
+      notable:    getV("BNOTABLE:"),
+    });
+    if (b < totalBatches - 1) await new Promise(r => setTimeout(r, 600));
+  }
+
+  const batchSummary = batchResults.map(br =>
+    "--- バッチ "+br.batchNum+" ("+br.count+"件) ---\n"
+    +"カテゴリー: "+br.categories.map(c=>c.name+"("+c.pct+"%)").join(", ")+"\n"
+    +"トレンド: "+br.trends.map(t=>t.title).join(" / ")+"\n"
+    +"注目特許: "+br.notable
+  ).join("\n\n");
+
+  const synthText1 = await claudePost(
+    "You are a patent intelligence analyst. Based on the batch analysis below, synthesize the technology category breakdown and key trends.\n\n"
+    +"Total: "+allPatents.length+" patents ("+totalBatches+" batches). Filter: "+filterDesc+"\n\n"
+    +"Batch summaries:\n"+batchSummary+"\n\n"
+    +"Reply ONLY in this exact format:\n"
+    +"CAT1:category name|percentage|detailed one-line description\n"
+    +"CAT2:category name|percentage|detailed one-line description\n"
+    +"CAT3:category name|percentage|detailed one-line description\n"
+    +"CAT4:category name|percentage|detailed one-line description\n"
+    +"CAT5:category name|percentage|detailed one-line description\n"
+    +"TREND1:trend title|3-4 sentence detailed explanation in Japanese\n"
+    +"TREND2:trend title|3-4 sentence detailed explanation in Japanese\n"
+    +"TREND3:trend title|3-4 sentence detailed explanation in Japanese"
+    , SYNTH_TOKENS
+  );
+  await new Promise(r => setTimeout(r, 800));
+
+  const synthText2 = await claudePost(
+    "You are a patent intelligence analyst. Based on the batch analysis below, write the 2050 scenario, strategic implications, and most notable patent.\n\n"
+    +"Total: "+allPatents.length+" patents ("+totalBatches+" batches). Filter: "+filterDesc+"\n\n"
+    +"Batch summaries:\n"+batchSummary+"\n\n"
+    +"Reply ONLY in this exact format:\n"
+    +"IMPACT:5-6 sentence comprehensive 2050 social transformation scenario in Japanese\n"
+    +"STRATEGIC:4-5 sentence competitive advantage and strategic implications in Japanese\n"
+    +"PATENT:2-3 sentence description of the most notable patent and its innovation in Japanese"
+    , SYNTH_TOKENS
+  );
+
+  const getV1 = p => { const l = synthText1.split("\n").find(l => l.startsWith(p)); return l ? l.slice(p.length).trim() : ""; };
+  const getV2 = p => { const l = synthText2.split("\n").find(l => l.startsWith(p)); return l ? l.slice(p.length).trim() : ""; };
+  const parseBar2 = p => { const pts = getV1(p).split("|"); return { name:pts[0]||"", pct:parseInt(pts[1]||"0",10), desc:pts[2]||"" }; };
+  const parseTrend2 = p => { const v = getV1(p); const i = v.indexOf("|"); return { title:i>=0?v.slice(0,i):v, body:i>=0?v.slice(i+1):"" }; };
+
+  const r = {
+    deep: false,
+    filterDesc,
+    totalCount:   allPatents.length,
+    totalBatches,
+    categories:   [parseBar2("CAT1:"),parseBar2("CAT2:"),parseBar2("CAT3:"),parseBar2("CAT4:"),parseBar2("CAT5:")].filter(c=>c.name),
+    trends:       [parseTrend2("TREND1:"),parseTrend2("TREND2:"),parseTrend2("TREND3:")].filter(t=>t.title),
+    impact2050:   getV2("IMPACT:"),
+    strategic:    getV2("STRATEGIC:"),
+    topPatent:    getV2("PATENT:"),
+  };
+
+  // DB保存（単発分析（doAnalyzeResults）と同じテーブル・キー構造）
+  await sbSaveAnalysis({
+    company_id:    companyId || ("search__" + encodeURIComponent(filterDesc).replace(/%/g,"").slice(0,30)),
+    company_name:  companyName,
+    date_from:     dateFrom || "2000-01-01",
+    date_to:       dateTo   || "2099-12-31",
+    total_patents: allPatents.length,
+    categories:    JSON.stringify(r.categories),
+    trends:        JSON.stringify(r.trends),
+    impact2050:    r.impact2050,
+    strategic:     r.strategic,
+    top_patent:    r.topPatent,
+    analyzed_at:   new Date().toISOString(),
+  });
+
+  return r;
+}
+
+/* ━━━ 一括分析パネル本体 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function BatchAnalysisPanel({ companies, sbRpc, claudePost, sbSaveAnalysis, dateFrom, dateTo, c, card }) {
+  const [batchSelCompanies, setBatchSelCompanies] = useState([]);
+  const [keywordsText, setKeywordsText] = useState("labor\nproductivity\ndecision\nmobility\ntransportation");
+  const [queue, setQueue] = useState([]); // {companyId, companyName, keyword, count, checked, status, result, error}
+  const [previewPhase, setPreviewPhase] = useState("idle"); // idle|running|done
+  const [runPhase, setRunPhase] = useState("idle"); // idle|running|done
+  const [runProgress, setRunProgress] = useState({ done:0, total:0, label:"" });
+  const stopRef = useRef(false);
+
+  const toggleCompany = (id) => setBatchSelCompanies(prev => prev.includes(id) ? prev.filter(x=>x!==id) : [...prev, id]);
+  const buildKeywordList = () => keywordsText.split("\n").map(s=>s.trim()).filter(Boolean);
+
+  const runPreview = async () => {
+    const keywords = buildKeywordList();
+    if (batchSelCompanies.length === 0 || keywords.length === 0) return;
+    setPreviewPhase("running");
+    setQueue([]);
+    const newQueue = [];
+    for (const companyId of batchSelCompanies) {
+      const company = companies.find(co => co.id === companyId);
+      for (const keyword of keywords) {
+        try {
+          const data = await sbRpc("search_patents", {
+            keyword: keyword.trim() || null, inventor: null,
+            company_ids: [companyId], countries: null,
+            from_date: dateFrom || null, to_date: dateTo || null,
+            page_offset: 0, page_limit: 1,
+          });
+          const count = data?.[0]?.total_count ? Number(data[0].total_count) : 0;
+          newQueue.push({
+            companyId, companyName: company?.name || companyId, keyword, count,
+            checked: count > 0 && count <= 800,
+            status: "pending",
+          });
+        } catch(e) {
+          newQueue.push({ companyId, companyName: company?.name || companyId, keyword, count: null, checked: false, status: "error", error: e.message });
+        }
+        setQueue([...newQueue]);
+        await new Promise(r => setTimeout(r, 150));
+      }
+    }
+    setPreviewPhase("done");
+  };
+
+  const toggleQueueItem = (idx) => setQueue(prev => prev.map((q,i) => i===idx ? {...q, checked: !q.checked} : q));
+
+  const runBatch = async () => {
+    stopRef.current = false;
+    setRunPhase("running");
+    const targets = queue.filter(q => q.checked && q.count > 0);
+    setRunProgress({ done:0, total: targets.length, label:"" });
+    for (let i = 0; i < targets.length; i++) {
+      if (stopRef.current) break;
+      const t = targets[i];
+      const qIdx = queue.indexOf(t);
+      setRunProgress({ done:i, total: targets.length, label: t.companyName+" × "+t.keyword });
+      setQueue(prev => prev.map((q,idx)=> idx===qIdx ? {...q, status:"running"} : q));
+      try {
+        const r = await runOneAnalysisPure({
+          companyId: t.companyId, companyName: t.companyName, keyword: t.keyword,
+          dateFrom, dateTo, sbRpc, claudePost, sbSaveAnalysis,
+        });
+        setQueue(prev => prev.map((q,idx)=> idx===qIdx ? {...q, status:"done", result:r} : q));
+      } catch(e) {
+        setQueue(prev => prev.map((q,idx)=> idx===qIdx ? {...q, status:"error", error:e.message} : q));
+      }
+      await new Promise(r => setTimeout(r, 1200));
+    }
+    setRunProgress(prev => ({ ...prev, done: targets.length }));
+    setRunPhase("done");
+  };
+
+  const exportCompanyPDF = (companyId) => {
+    const items = queue.filter(q => q.companyId === companyId && q.status === "done" && q.result);
+    if (items.length === 0) return;
+    const companyName = items[0].companyName;
+    const html = items.map((item, i) => (
+      (i > 0 ? '<div style="page-break-before:always"></div>' : "")
+      + '<h1>📊 AI特許分析レポート — キーワード: "'+item.keyword+'"</h1>'
+      + generatePortfolioHTML({name: companyName}, item.result, {total_patents: item.result.totalCount, analyzed_at: new Date().toISOString()})
+    )).join("\n");
+    printToPDF("一括分析_"+companyName, html);
+  };
+
+  const companiesWithResults = [...new Set(queue.filter(q=>q.status==="done").map(q=>q.companyId))];
+
+  return (
+    <div>
+      <div style={{...card, marginBottom:16}}>
+        <div style={{fontSize:13,fontWeight:700,color:c.cyan,marginBottom:10}}>🗂️ 一括分析（複数企業 × 複数キーワード）</div>
+
+        <div style={{marginBottom:12}}>
+          <div style={{fontSize:11,color:c.muted,marginBottom:4}}>対象企業（クリックで選択）</div>
+          <div style={{maxHeight:180,overflowY:"auto",border:"1px solid "+c.border,borderRadius:6,padding:6}}>
+            {companies.map(co => (
+              <div key={co.id} onClick={() => toggleCompany(co.id)}
+                style={{display:"flex",alignItems:"center",gap:6,padding:"4px 6px",borderRadius:5,cursor:"pointer",
+                  background:batchSelCompanies.includes(co.id)?"#0c2d42":"transparent"}}>
+                <span style={{fontSize:11}}>{co.flag}</span>
+                <span style={{fontSize:11,color:batchSelCompanies.includes(co.id)?c.cyan:c.text,flex:1}}>{co.name}</span>
+                {batchSelCompanies.includes(co.id) && <span style={{fontSize:10,color:c.cyan}}>✓</span>}
+              </div>
+            ))}
+          </div>
+          <div style={{fontSize:10,color:c.muted,marginTop:4}}>{batchSelCompanies.length}社選択中</div>
+        </div>
+
+        <div style={{marginBottom:12}}>
+          <div style={{fontSize:11,color:c.muted,marginBottom:4}}>キーワード（1行に1つ）</div>
+          <textarea value={keywordsText} onChange={e=>setKeywordsText(e.target.value)} rows={5}
+            style={{width:"100%",padding:"7px 10px",borderRadius:7,border:"1px solid "+c.border,background:c.bg2,color:c.text,fontSize:12,outline:"none",boxSizing:"border-box",fontFamily:"monospace"}}/>
+        </div>
+
+        <div style={{fontSize:10,color:c.muted,marginBottom:10}}>期間: {dateFrom} 〜 {dateTo}（左側の検索フィルターと共通の日付が使われます）</div>
+
+        <button onClick={runPreview} disabled={previewPhase==="running"||batchSelCompanies.length===0}
+          style={{width:"100%",padding:"8px",borderRadius:7,border:"none",background:batchSelCompanies.length===0?"#1a3550":c.amber,color:"#000",fontWeight:700,fontSize:12,cursor:batchSelCompanies.length===0?"not-allowed":"pointer"}}>
+          {previewPhase==="running" ? "件数プレビュー中…（"+queue.length+"件確認済み）" : "① 件数をプレビュー（まだAI分析は実行しません）"}
+        </button>
+      </div>
+
+      {queue.length > 0 && (
+        <div style={{...card, marginBottom:16}}>
+          <div style={{fontSize:12,fontWeight:700,color:c.text,marginBottom:8}}>
+            組み合わせ一覧（チェックしたものだけ実行されます）
+          </div>
+          <div style={{fontSize:10,color:c.amber,marginBottom:8}}>
+            ⚠️ 800件を超える組み合わせは自動でチェックを外しています（例：通信用語として大量ヒットし本来の意図と無関係な内容になりやすいため）。内容をご確認のうえ、必要な場合のみ手動でチェックしてください。
+          </div>
+          <div style={{maxHeight:320,overflowY:"auto"}}>
+            {queue.map((q, idx) => (
+              <div key={idx} onClick={() => q.count>0 && toggleQueueItem(idx)}
+                style={{display:"flex",alignItems:"center",gap:8,padding:"5px 8px",borderRadius:5,cursor:q.count>0?"pointer":"default",
+                  background: q.status==="done" ? "#0a1e0a" : q.status==="error" ? "#2a0a0a" : q.status==="running" ? "#1a1200" : "transparent",
+                  opacity: q.count===0 ? 0.4 : 1}}>
+                <input type="checkbox" checked={q.checked} disabled={q.count===0} readOnly style={{cursor:"pointer"}}/>
+                <span style={{fontSize:11,color:c.text,flex:1}}>{q.companyName} × "{q.keyword}"</span>
+                <span style={{fontSize:11,fontWeight:700,color:q.count>800?c.amber:c.cyan}}>
+                  {q.count===null ? "エラー" : q.count.toLocaleString()+"件"}
+                </span>
+                {q.status==="running" && <span style={{fontSize:10,color:c.amber}}>実行中…</span>}
+                {q.status==="done" && <span style={{fontSize:10,color:c.green}}>✅完了</span>}
+                {q.status==="error" && <span style={{fontSize:10,color:"#f87171"}}>❌{q.error}</span>}
+              </div>
+            ))}
+          </div>
+
+          <div style={{display:"flex",gap:8,marginTop:10}}>
+            <button onClick={runBatch} disabled={runPhase==="running"||queue.filter(q=>q.checked).length===0}
+              style={{flex:1,padding:"8px",borderRadius:7,border:"none",background:runPhase==="running"?"#1a3550":c.purple,color:"#fff",fontWeight:700,fontSize:12,cursor:runPhase==="running"?"not-allowed":"pointer"}}>
+              {runPhase==="running"
+                ? "🤖 実行中… "+runProgress.done+"/"+runProgress.total+"（"+runProgress.label+"）"
+                : "② チェック済み"+queue.filter(q=>q.checked).length+"件を一括実行（検索→AI分析→DB保存）"}
+            </button>
+            {runPhase==="running" && (
+              <button onClick={()=>stopRef.current=true} style={{padding:"8px 14px",borderRadius:7,border:"1px solid "+c.border,background:"transparent",color:c.amber,fontSize:12,cursor:"pointer"}}>⏹ 停止</button>
+            )}
+          </div>
+          {runPhase==="running" && (
+            <div style={{height:5,background:c.bg2,borderRadius:3,overflow:"hidden",marginTop:8}}>
+              <div style={{height:"100%",borderRadius:3,background:"linear-gradient(90deg,"+c.purple+",#a78bfa)",
+                width:(runProgress.total>0?(runProgress.done/runProgress.total*100):0)+"%",transition:"width .4s"}}/>
+            </div>
+          )}
+        </div>
+      )}
+
+      {companiesWithResults.length > 0 && (
+        <div style={card}>
+          <div style={{fontSize:12,fontWeight:700,color:c.green,marginBottom:8}}>③ 完了した企業からPDFを出力</div>
+          {companiesWithResults.map(companyId => {
+            const items = queue.filter(q=>q.companyId===companyId && q.status==="done");
+            const companyName = items[0]?.companyName;
+            return (
+              <button key={companyId} onClick={()=>exportCompanyPDF(companyId)}
+                style={{display:"block",width:"100%",textAlign:"left",padding:"8px 10px",borderRadius:6,border:"1px solid "+c.green,background:"transparent",color:c.green,fontSize:12,cursor:"pointer",marginBottom:6}}>
+                📄 {companyName} のPDFを出力（{items.length}キーワード分）
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function generateDetailHTML(patent, analysis) {
   const scores = `
     <div class="score-row">
@@ -529,6 +853,7 @@ function SearchTab({ sbRpc, fetchDescription, fetchClaims, claudePost, sbPost, s
   const [analyzePhase,  setAnalyzePhase]  = useState("idle"); // idle | analyzing | done
   const [analysis,      setAnalysis]      = useState(null);
   const [showAnalysis,  setShowAnalysis]  = useState(true);
+  const [batchMode,     setBatchMode]     = useState(false);
 
   const PAGE_SIZE = 20;
 
@@ -1179,10 +1504,19 @@ const [claimsFetchPhase, setClaimsFetchPhase] = useState("idle");
             フィルターをリセット
           </button>
         )}
+
+        <button onClick={() => setBatchMode(m => !m)}
+          style={{width:"100%",padding:"8px",borderRadius:7,border:"1px solid "+(batchMode?c.cyan:c.border),background:batchMode?"#0c2d42":"transparent",color:batchMode?c.cyan:c.muted,fontSize:11,fontWeight:700,cursor:"pointer",marginTop:10}}>
+          {batchMode ? "🗂️ 一括分析モード（ON） — 通常検索に戻す" : "🗂️ 一括分析モードに切替（複数企業×複数キーワード）"}
+        </button>
       </div>
 
       {/* 右：検索結果 */}
       <div style={{flex:1,overflowY:"auto",padding:16}}>
+        {batchMode ? (
+          <BatchAnalysisPanel companies={companies} sbRpc={sbRpc} claudePost={claudePost} sbSaveAnalysis={sbSaveAnalysis} dateFrom={dateFrom} dateTo={dateTo} c={c} card={card}/>
+        ) : (
+        <>
         {err && <div style={{padding:"6px 12px",background:"#1a1000",borderRadius:6,fontSize:11,color:c.amber,marginBottom:12}}>{err}</div>}
 
         {/* ★ AI分析結果パネル */}
@@ -1436,6 +1770,8 @@ const [claimsFetchPhase, setClaimsFetchPhase] = useState("idle");
             <span style={{padding:"6px 14px",fontSize:12,color:c.muted}}>{page+1} / {totalPages}</span>
             <button onClick={() => doSearch(page+1)} disabled={page>=totalPages-1||loading} style={{padding:"6px 14px",borderRadius:6,border:"1px solid "+c.border,background:"transparent",color:page>=totalPages-1?c.muted:c.text,cursor:page>=totalPages-1?"not-allowed":"pointer"}}>次 →</button>
           </div>
+        )}
+        </>
         )}
       </div>
     </div>
