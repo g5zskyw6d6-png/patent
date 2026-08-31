@@ -238,9 +238,12 @@ async function runOneAnalysisPure({ companyId, companyName, keyword, dateFrom, d
   };
 
   // DB保存（単発分析（doAnalyzeResults）と同じテーブル・キー構造）
+  // keyword を保存キーに含めることで、同一企業・同一期間でも
+  // キーワードごとに別レコードとして残す（上書きを防ぐ）
   await sbSaveAnalysis({
     company_id:    companyId || ("search__" + encodeURIComponent(filterDesc).replace(/%/g,"").slice(0,30)),
     company_name:  companyName,
+    keyword:       keyword.trim() || null,
     date_from:     dateFrom || "2000-01-01",
     date_to:       dateTo   || "2099-12-31",
     total_patents: allPatents.length,
@@ -584,6 +587,8 @@ export default function Dashboard({ supabaseUrl, supabaseKey, claudeApiKey, epoC
   }, [supabaseUrl, supabaseKey]);
 
   // portfolio_analyses専用保存（RPC経由でSafari CORS問題を回避）
+  // keyword を一意キーに含める：同一企業・同一期間でもキーワードが違えば
+  // 別レコードとして保存する（未指定time=nullは is.null で一致させる）
   const sbSaveAnalysis = useCallback(async (row) => {
     const authHeaders = {
       "apikey": supabaseKey,
@@ -604,10 +609,14 @@ export default function Dashboard({ supabaseUrl, supabaseKey, claudeApiKey, epoC
     }
 
     // フォールバック: DELETE + INSERT（Safari CORS対応・409回避）
+    const keywordCond = row.keyword
+      ? "&keyword=eq." + encodeURIComponent(row.keyword)
+      : "&keyword=is.null";
     const delUrl = supabaseUrl + "/rest/v1/portfolio_analyses"
       + "?company_id=eq." + encodeURIComponent(row.company_id)
       + "&date_from=eq."  + encodeURIComponent(row.date_from)
-      + "&date_to=eq."    + encodeURIComponent(row.date_to);
+      + "&date_to=eq."    + encodeURIComponent(row.date_to)
+      + keywordCond;
     const delRes = await fetch(delUrl, { method: "DELETE", headers: authHeaders });
     if (!delRes.ok) {
       const txt = await delRes.text().catch(() => "");
@@ -1315,6 +1324,7 @@ const [claimsFetchPhase, setClaimsFetchPhase] = useState("idle");
       await sbSaveAnalysis({
         company_id:    searchCompanyId || ("search__" + encodeURIComponent(filterDesc).replace(/%/g,"").slice(0,30)),
         company_name:  searchCompanyName,
+        keyword:       keyword.trim() || null,
         date_from:     saveFrom,
         date_to:       saveTo,
         total_patents: allPatents.length,
@@ -1974,11 +1984,14 @@ function AnalyzeTab({ sbGet, supabaseUrl, supabaseKey, companies, c, card }) {
   const loadAllAnalyses = async () => {
     try {
       const rows = await sbGet(
-        "portfolio_analyses?select=company_id,company_name,date_from,date_to,total_patents,analyzed_at&order=analyzed_at.desc&limit=200"
+        "portfolio_analyses?select=company_id,company_name,keyword,date_from,date_to,total_patents,analyzed_at&order=analyzed_at.desc&limit=200"
       );
       setAllAnalyses(rows || []);
     } catch(e) {}
   };
+
+  // company_id/date_from/date_to/keyword が同じ行を指し示すためのクエリ条件片
+  const kwCond = (row) => row.keyword ? "&keyword=eq."+encodeURIComponent(row.keyword) : "&keyword=is.null";
 
   const loadAllPaperAnalyses = async () => {
     try {
@@ -1997,13 +2010,14 @@ function AnalyzeTab({ sbGet, supabaseUrl, supabaseKey, companies, c, card }) {
       const rows = await sbGet(
         "portfolio_analyses?company_id=eq."+row.company_id
         +"&date_from=eq."+row.date_from+"&date_to=eq."+row.date_to
+        +kwCond(row)
         +"&select=*&order=analyzed_at.desc&limit=1"
       );
       if (rows && rows.length > 0) {
         const r = rows[0];
         const cats   = typeof r.categories === "string" ? JSON.parse(r.categories) : (r.categories || []);
         const trends = typeof r.trends     === "string" ? JSON.parse(r.trends)     : (r.trends     || []);
-        setAnalysis({ kind:"patent", categories:cats, trends, impact2050:r.impact2050, strategic:r.strategic, topPatent:r.top_patent, analyzedAt:r.analyzed_at, totalPatents:r.total_patents });
+        setAnalysis({ kind:"patent", categories:cats, trends, impact2050:r.impact2050, strategic:r.strategic, topPatent:r.top_patent, analyzedAt:r.analyzed_at, totalPatents:r.total_patents, keyword:r.keyword });
       } else {
         setErr("分析データを取得できませんでした。");
       }
@@ -2084,7 +2098,7 @@ function AnalyzeTab({ sbGet, supabaseUrl, supabaseKey, companies, c, card }) {
           )}
           {listTab === "patent" && allAnalyses.map((row, i) => {
             const rowCo   = companies.find(c => c.id === row.company_id);
-            const isActive = selKind==="patent" && selRow?.company_id === row.company_id && selRow?.date_from === row.date_from && selRow?.date_to === row.date_to;
+            const isActive = selKind==="patent" && selRow?.company_id === row.company_id && selRow?.date_from === row.date_from && selRow?.date_to === row.date_to && (selRow?.keyword || null) === (row.keyword || null);
             return (
               <div key={"pat"+i}
                 style={{padding:"10px 12px",borderRadius:7,marginBottom:4,background:isActive?"#0c2d42":"transparent",border:"1px solid "+(isActive?c.cyan:c.border),transition:"background .1s"}}>
@@ -2095,6 +2109,11 @@ function AnalyzeTab({ sbGet, supabaseUrl, supabaseKey, companies, c, card }) {
                   </span>
                   {isActive && <span style={{fontSize:9,color:c.cyan,padding:"1px 5px",borderRadius:3,border:"1px solid "+c.cyan,flexShrink:0}}>表示中</span>}
                 </div>
+                {row.keyword && (
+                  <div style={{fontSize:10,color:"#facc15",marginBottom:2,cursor:"pointer",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} onClick={() => selectRow(row)}>
+                    🏷️ {row.keyword}
+                  </div>
+                )}
                 <div style={{display:"flex",alignItems:"center",gap:6,marginTop:4}}>
                   <div style={{flex:1,cursor:"pointer"}} onClick={() => selectRow(row)}>
                     <div style={{fontSize:10,color:c.muted}}>{row.date_from} 〜 {row.date_to}</div>
@@ -2106,12 +2125,13 @@ function AnalyzeTab({ sbGet, supabaseUrl, supabaseKey, companies, c, card }) {
                   <button
                     onClick={async (e) => {
                       e.stopPropagation();
-                      if (!window.confirm("「"+row.company_name+"」の分析データを削除しますか？")) return;
+                      if (!window.confirm("「"+row.company_name+"」"+(row.keyword?"（"+row.keyword+"）":"")+"の分析データを削除しますか？")) return;
                       try {
                         await fetch(
                           (typeof supabaseUrl !== "undefined" ? supabaseUrl : "") +
                           "/rest/v1/portfolio_analyses?company_id=eq."+encodeURIComponent(row.company_id)+
-                          "&date_from=eq."+row.date_from+"&date_to=eq."+row.date_to,
+                          "&date_from=eq."+row.date_from+"&date_to=eq."+row.date_to+
+                          kwCond(row),
                           { method:"DELETE", headers:{"apikey": (typeof supabaseKey !== "undefined" ? supabaseKey : ""), "Authorization":"Bearer "+(typeof supabaseKey !== "undefined" ? supabaseKey : "")} }
                         );
                         setAllAnalyses(prev => prev.filter((_, idx) => idx !== i));
@@ -2193,6 +2213,9 @@ function AnalyzeTab({ sbGet, supabaseUrl, supabaseKey, companies, c, card }) {
                       <span style={{fontSize:16}}>{co?.flag || "🔍"}</span>
                       <span style={{fontSize:16,fontWeight:700,color:c.cyan}}>{selRow.company_name}</span>
                       <span style={{fontSize:10,padding:"2px 8px",borderRadius:4,background:"#0c2d42",color:c.cyan,border:"1px solid "+c.cyan}}>特許</span>
+                      {(analysis.keyword || selRow.keyword) && (
+                        <span style={{fontSize:10,padding:"2px 8px",borderRadius:4,background:"#3a2e05",color:"#facc15",border:"1px solid #facc15"}}>🏷️ {analysis.keyword || selRow.keyword}</span>
+                      )}
                     </div>
                     <div style={{fontSize:11,color:c.muted}}>
                       {selRow.date_from} 〜 {selRow.date_to} ／ 対象: {analysis.totalPatents}件 ／ 分析日時: {new Date(analysis.analyzedAt).toLocaleString("ja-JP")}
