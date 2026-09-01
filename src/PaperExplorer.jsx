@@ -1,8 +1,302 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 
 // =============================================================================
-// PaperExplorer v5 — AI解説修正 + DB保存 + CSV + AI分析保存 + PDF
+// PaperExplorer v6 — AI解説修正 + DB保存 + CSV + AI分析保存 + PDF + 一括分析
 // =============================================================================
+
+/* ━━━ AND/OR/NOT パーサー（コンポーネント外の純粋関数版） ━━━━━━━━━━━━━━ */
+function buildKeywordFilterPure(raw) {
+  if (!raw.trim()) return "";
+  const parts = raw.trim().split(/\s+/);
+  const andT = [], orT = [], notT = []; let mode = "and";
+  for (const p of parts) {
+    if (p.toUpperCase()==="AND"){mode="and";continue;} if (p.toUpperCase()==="OR"){mode="or";continue;} if (p.toUpperCase()==="NOT"){mode="not";continue;}
+    if (mode==="or") orT.push(p); else if (mode==="not") notT.push(p); else andT.push(p); mode="and";
+  }
+  const f = [];
+  for (const t of andT) f.push(`or=(title.ilike.*${t}*,abstract_text.ilike.*${t}*)`);
+  if (orT.length>0) f.push(`or=(${orT.map(t=>`title.ilike.*${t}*,abstract_text.ilike.*${t}*`).join(",")})`);
+  for (const t of notT){f.push(`title=not.ilike.*${t}*`);f.push(`abstract_text=not.ilike.*${t}*`);}
+  return f.join("&");
+}
+
+/* ━━━ 一括分析（複数企業 × 複数キーワード）用：論文版 単発分析の純粋関数版 ━━━
+   PaperExplorer内の doAnalyzeResults と同じ処理を、UI状態を持たない形で切り出したもの。
+   paper_analyses は DELETE を行わず常に新規INSERTするため、
+   企業×キーワードの組み合わせごとに個別レコードとして残る（上書きされない）。 */
+async function runOnePaperAnalysisPure({ companySlug, companyName, keyword, year, supabaseUrl, supabaseKey, claudePost }) {
+  let fp = []; const kf = buildKeywordFilterPure(keyword); if (kf) fp.push(kf);
+  if (companySlug) fp.push(`company_slug=eq.${companySlug}`);
+  if (year) fp.push(`publication_year=eq.${year}`);
+  const qs = [`select=openalex_id,title,publication_year,cited_by_count,source_name,company_slug,abstract_text,topics`,
+    ...fp, "order=cited_by_count.desc", "limit=500"].join("&");
+  const res = await fetch(`${supabaseUrl}/rest/v1/papers_search?${qs}`, {
+    headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}`, "Accept-Profile": "openalex" } });
+  const allPapers = await res.json();
+
+  const filterDesc = "企業: " + companyName + ' / キーワード: "' + keyword + '"' + (year ? " / 年: " + year : " / 全期間");
+  if (!Array.isArray(allPapers) || allPapers.length === 0) {
+    return { filterDesc, totalCount: 0, categories: [], trends: [], impact2050: "", strategic: "", topPatent: "" };
+  }
+
+  const BATCH = 50; const batches = []; for (let i = 0; i < allPapers.length; i += BATCH) batches.push(allPapers.slice(i, i + BATCH));
+  const batchResults = [];
+
+  for (let b = 0; b < batches.length; b++) {
+    const batch = batches[b];
+    const list = batch.map((p,i) => { const abs = (p.abstract_text||"").split(/\s+/).slice(0,80).join(" ");
+      return `${i+1}. [${p.publication_year}] ${p.title} — ${companyName} (cited:${p.cited_by_count})\n   ${abs}`; }).join("\n");
+    const bText = await claudePost(
+      "You are a research intelligence analyst. Analyze this batch of academic papers. Reply ONLY in this exact format:\n"
+      +"BCAT1:category name|percentage|one line description\nBCAT2:category name|percentage|one line description\nBCAT3:category name|percentage|one line description\nBCAT4:category name|percentage|one line description\nBCAT5:category name|percentage|one line description\n"
+      +"BTREND1:trend title|2 sentence explanation in Japanese\nBTREND2:trend title|2 sentence explanation in Japanese\nBTREND3:trend title|2 sentence explanation in Japanese\n"
+      +"BNOTABLE:notable paper title and innovation in Japanese (2 sentences)\n\n"
+      +"Batch "+(b+1)+"/"+batches.length+" ("+batch.length+" of "+allPapers.length+" papers):\n"+list, 1200);
+    const getV = p => { const l = bText.split("\n").find(l=>l.startsWith(p)); return l?l.slice(p.length).trim():""; };
+    const parseBar = p => { const pts = getV(p).split("|"); return { name:pts[0]||"", pct:parseInt(pts[1]||"0",10), desc:pts[2]||"" }; };
+    const parseTrend = p => { const v = getV(p); const i = v.indexOf("|"); return { title:i>=0?v.slice(0,i):v, body:i>=0?v.slice(i+1):"" }; };
+    batchResults.push({ batchNum:b+1, count:batch.length,
+      categories:[parseBar("BCAT1:"),parseBar("BCAT2:"),parseBar("BCAT3:"),parseBar("BCAT4:"),parseBar("BCAT5:")].filter(x=>x.name),
+      trends:[parseTrend("BTREND1:"),parseTrend("BTREND2:"),parseTrend("BTREND3:")].filter(x=>x.title), notable:getV("BNOTABLE:") });
+    if (b < batches.length-1) await new Promise(r=>setTimeout(r,600));
+  }
+
+  const batchSummary = batchResults.map(br=>"--- バッチ"+br.batchNum+" ---\nカテゴリー: "+br.categories.map(x=>x.name+"("+x.pct+"%)").join(", ")+"\nトレンド: "+br.trends.map(x=>x.title).join(" / ")+"\n注目: "+br.notable).join("\n\n");
+  const synthText = await claudePost(
+    "Based on the batch analysis below, synthesize a comprehensive report.\nTotal: "+allPapers.length+" papers. Filter: "+filterDesc+"\n\n"+batchSummary+"\n\n"
+    +"Reply ONLY:\nCAT1:name|pct|desc\nCAT2:name|pct|desc\nCAT3:name|pct|desc\nCAT4:name|pct|desc\nCAT5:name|pct|desc\n"
+    +"TREND1:title|3-4 sentence Japanese\nTREND2:title|3-4 sentence Japanese\nTREND3:title|3-4 sentence Japanese\n"
+    +"IMPACT2040:2040年シナリオ(3-4文日本語)\nSTRATEGIC:戦略的示唆(3-4文日本語)\nNOTABLE:最注目論文(2-3文日本語)", 2500);
+  const getV = p => { const l = synthText.split("\n").find(l=>l.startsWith(p)); return l?l.slice(p.length).trim():""; };
+  const parseBar = p => { const pts = getV(p).split("|"); return { name:pts[0]||"", pct:parseInt(pts[1]||"0",10), desc:pts[2]||"" }; };
+  const parseTrend = p => { const v = getV(p); const i = v.indexOf("|"); return { title:i>=0?v.slice(0,i):v, body:i>=0?v.slice(i+1):"" }; };
+
+  const finalAnalysis = { filterDesc, totalCount:allPapers.length, totalBatches:batches.length, batchResults,
+    categories:[parseBar("CAT1:"),parseBar("CAT2:"),parseBar("CAT3:"),parseBar("CAT4:"),parseBar("CAT5:")].filter(x=>x.name),
+    trends:[parseTrend("TREND1:"),parseTrend("TREND2:"),parseTrend("TREND3:")].filter(x=>x.title),
+    impact2050:getV("IMPACT2040:"), strategic:getV("STRATEGIC:"), topPatent:getV("NOTABLE:") };
+
+  // DB保存（常にINSERTのみ。DELETEしないため、企業×キーワードの組み合わせごとに
+  // 別レコードとして残る＝特許側のような上書き問題が発生しない）
+  try {
+    await fetch(`${supabaseUrl}/rest/v1/paper_analyses`, { method:"POST",
+      headers:{ apikey:supabaseKey, Authorization:`Bearer ${supabaseKey}`, "Content-Type":"application/json", Prefer:"return=minimal", "Content-Profile":"openalex" },
+      body: JSON.stringify({ filter_desc: filterDesc, total_papers: allPapers.length,
+        categories: JSON.stringify(finalAnalysis.categories), trends: JSON.stringify(finalAnalysis.trends),
+        impact2040: finalAnalysis.impact2050, strategic: finalAnalysis.strategic, notable: finalAnalysis.topPatent }) });
+  } catch(e) { console.warn("論文分析DB保存失敗:", e.message); }
+
+  return finalAnalysis;
+}
+
+/* ━━━ 論文分析結果 → HTML断片（PDF出力用、printPDFと一括PDFで共有） ━━━━━━━ */
+function generatePaperAnalysisHTML(filterLabel, analysis) {
+  const cats = (analysis.categories||[]).map(cat=>`<div class="cat-row"><span class="cat-name">${cat.name}</span><div class="cat-bar-wrap"><div class="cat-bar" style="width:${cat.pct}%"></div></div><span class="cat-pct">${cat.pct}%</span></div><div class="cat-desc">${cat.desc}</div>`).join("");
+  const trends = (analysis.trends||[]).map((t,i)=>`<div class="trend"><div class="trend-title">動向${i+1}: ${t.title}</div><div class="trend-body">${t.body}</div></div>`).join("");
+  return `<h1>📄 AI論文動向分析レポート — ${filterLabel}</h1><div class="meta"><strong>${analysis.filterDesc||filterLabel}</strong> ／ 対象論文: ${analysis.totalCount}件 ／ 分析日: ${new Date().toLocaleString("ja-JP")}</div>`
+    +`<h2>研究テーマ分類</h2><div class="section">${cats}</div>`
+    +`<h2>主要研究トレンド</h2><div class="section">${trends}</div>`
+    +`<h2>2040年 社会実装シナリオ</h2><div class="section"><p class="body-text">${analysis.impact2050||""}</p></div>`
+    +`<h2>産業への戦略的示唆</h2><div class="section"><p class="body-text">${analysis.strategic||""}</p></div>`
+    +(analysis.topPatent?`<h2>★ 最注目論文</h2><div class="section highlight"><p class="body-text">${analysis.topPatent}</p></div>`:"");
+}
+
+function printPaperHTML(title, bodyHtml) {
+  const win = window.open("", "_blank");
+  win.document.write(`<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"/><title>${title}</title><style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:"Hiragino Sans","Yu Gothic","Meiryo",sans-serif;font-size:11pt;color:#111;background:#fff;padding:20mm 15mm;}h1{font-size:16pt;color:#0a2540;border-bottom:2px solid #0a2540;padding-bottom:6px;margin-bottom:12px;}h2{font-size:13pt;color:#1a4a7a;margin:16px 0 8px;border-left:4px solid #1a4a7a;padding-left:8px;}.meta{font-size:9.5pt;color:#555;margin-bottom:16px;}.section{margin-bottom:18px;padding:12px 14px;border:1px solid #dde;border-radius:6px;page-break-inside:avoid;}.body-text{font-size:10.5pt;line-height:1.75;color:#222;}.cat-row{display:flex;align-items:center;gap:12px;margin-bottom:7px;}.cat-name{font-size:10.5pt;font-weight:600;min-width:160px;}.cat-bar-wrap{flex:1;height:8px;background:#eef;border-radius:4px;overflow:hidden;}.cat-bar{height:100%;background:#2563eb;border-radius:4px;}.cat-pct{font-size:10pt;font-weight:700;color:#2563eb;min-width:40px;text-align:right;}.cat-desc{font-size:9.5pt;color:#555;margin-left:4px;}.trend{padding:8px 10px 8px 14px;border-left:3px solid #f59e0b;margin-bottom:8px;background:#fffbf0;border-radius:0 4px 4px 0;}.trend-title{font-size:10.5pt;font-weight:600;margin-bottom:3px;}.trend-body{font-size:10pt;color:#333;line-height:1.7;}.highlight{background:#f0f7ff;border:1px solid #bcd;padding:10px 14px;border-radius:5px;}.footer{margin-top:24px;padding-top:10px;border-top:1px solid #ccc;font-size:8.5pt;color:#888;}@media print{body{padding:0;}.section{page-break-inside:avoid;}@page{margin:15mm 12mm;size:A4;}}</style></head><body>${bodyHtml}<div class="footer">出力日時: ${new Date().toLocaleString("ja-JP")} — Patent Intelligence Platform (論文分析)</div></body></html>`);
+  win.document.close(); setTimeout(()=>win.print(), 400);
+}
+
+/* ━━━ 論文版 一括分析パネル本体 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function PaperBatchAnalysisPanel({ companies, supabaseUrl, supabaseKey, claudePost, GROUP_LABELS, c }) {
+  const [batchSelCompanies, setBatchSelCompanies] = useState([]);
+  const [keywordsText, setKeywordsText] = useState("labor\nproductivity\ndecision\nmobility\ntransportation");
+  const [yearFilter, setYearFilter] = useState("");
+  const [queue, setQueue] = useState([]); // {companySlug, companyName, keyword, count, checked, status, result, error}
+  const [previewPhase, setPreviewPhase] = useState("idle");
+  const [runPhase, setRunPhase] = useState("idle");
+  const [runProgress, setRunProgress] = useState({ done:0, total:0, label:"" });
+  const stopRef = useRef(false);
+
+  const toggleCompany = (id) => setBatchSelCompanies(prev => prev.includes(id) ? prev.filter(x=>x!==id) : [...prev, id]);
+  const buildKeywordList = () => keywordsText.split("\n").map(s=>s.trim()).filter(Boolean);
+
+  const runPreview = async () => {
+    const keywords = buildKeywordList();
+    if (batchSelCompanies.length === 0 || keywords.length === 0) return;
+    setPreviewPhase("running");
+    setQueue([]);
+    const newQueue = [];
+    for (const companySlug of batchSelCompanies) {
+      const company = companies.find(co => co.id === companySlug);
+      for (const keyword of keywords) {
+        try {
+          let fp = []; const kf = buildKeywordFilterPure(keyword); if (kf) fp.push(kf);
+          fp.push(`company_slug=eq.${companySlug}`);
+          if (yearFilter) fp.push(`publication_year=eq.${yearFilter}`);
+          const qs = [`select=openalex_id`, ...fp, "limit=1"].join("&");
+          const res = await fetch(`${supabaseUrl}/rest/v1/papers_search?${qs}`, {
+            headers: { apikey:supabaseKey, Authorization:`Bearer ${supabaseKey}`, "Accept-Profile":"openalex", Prefer:"count=estimated" } });
+          const cr = res.headers.get("content-range");
+          let count = 0; if (cr) { const m = cr.match(/\/(\d+)/); if (m) count = parseInt(m[1],10); }
+          newQueue.push({
+            companySlug, companyName: company?.name || companySlug, keyword, count,
+            checked: count > 0 && count <= 800,
+            status: "pending",
+          });
+        } catch(e) {
+          newQueue.push({ companySlug, companyName: company?.name || companySlug, keyword, count: null, checked: false, status:"error", error:e.message });
+        }
+        setQueue([...newQueue]);
+        await new Promise(r=>setTimeout(r,150));
+      }
+    }
+    setPreviewPhase("done");
+  };
+
+  const toggleQueueItem = (idx) => setQueue(prev => prev.map((q,i)=> i===idx ? {...q, checked: !q.checked} : q));
+
+  const runBatch = async () => {
+    stopRef.current = false;
+    setRunPhase("running");
+    const targets = queue.filter(q => q.checked && q.count > 0);
+    setRunProgress({ done:0, total:targets.length, label:"" });
+    for (let i = 0; i < targets.length; i++) {
+      if (stopRef.current) break;
+      const t = targets[i];
+      const qIdx = queue.indexOf(t);
+      setRunProgress({ done:i, total:targets.length, label:t.companyName+" × "+t.keyword });
+      setQueue(prev => prev.map((q,idx)=> idx===qIdx ? {...q, status:"running"} : q));
+      try {
+        const r = await runOnePaperAnalysisPure({
+          companySlug: t.companySlug, companyName: t.companyName, keyword: t.keyword,
+          year: yearFilter, supabaseUrl, supabaseKey, claudePost,
+        });
+        setQueue(prev => prev.map((q,idx)=> idx===qIdx ? {...q, status:"done", result:r} : q));
+      } catch(e) {
+        setQueue(prev => prev.map((q,idx)=> idx===qIdx ? {...q, status:"error", error:e.message} : q));
+      }
+      await new Promise(r=>setTimeout(r,1200));
+    }
+    setRunProgress(prev => ({ ...prev, done: targets.length }));
+    setRunPhase("done");
+  };
+
+  const exportCompanyPDF = (companySlug) => {
+    const items = queue.filter(q => q.companySlug === companySlug && q.status === "done" && q.result);
+    if (items.length === 0) return;
+    const companyName = items[0].companyName;
+    const html = items.map((item, i) => (
+      (i>0 ? '<div style="page-break-before:always"></div>' : "")
+      + generatePaperAnalysisHTML('キーワード: "'+item.keyword+'"', item.result)
+    )).join("\n");
+    printPaperHTML("一括論文分析_"+companyName, html);
+  };
+
+  const companyIds = [...new Set(queue.map(q=>q.companySlug))];
+
+  return (
+    <div style={{padding:16}}>
+      <div style={{fontSize:14,fontWeight:700,color:"#34d399",marginBottom:12}}>🗂️ 一括論文分析（複数企業 × 複数キーワード）</div>
+
+      <div style={{marginBottom:14}}>
+        <div style={{fontSize:11,color:c.muted,marginBottom:6}}>対象企業（クリックで選択）</div>
+        <div style={{maxHeight:180,overflowY:"auto",border:"1px solid "+c.border,borderRadius:6,padding:6}}>
+          {Object.entries(GROUP_LABELS).map(([gid,label]) => (
+            <div key={gid} style={{marginBottom:4}}>
+              <div style={{fontSize:9,color:c.muted,padding:"2px 4px"}}>{label}</div>
+              {(companies||[]).filter(co=>co.group_id===gid).map(co => (
+                <div key={co.id} onClick={()=>toggleCompany(co.id)}
+                  style={{display:"flex",justifyContent:"space-between",padding:"5px 8px",borderRadius:4,cursor:"pointer",
+                    background:batchSelCompanies.includes(co.id)?"#052e2b":"transparent"}}>
+                  <span style={{fontSize:11,color:batchSelCompanies.includes(co.id)?"#34d399":c.text}}>{co.name}</span>
+                  {batchSelCompanies.includes(co.id) && <span style={{fontSize:10,color:"#34d399"}}>✓</span>}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+        <div style={{fontSize:10,color:c.muted,marginTop:4}}>{batchSelCompanies.length}社選択中</div>
+      </div>
+
+      <div style={{marginBottom:14}}>
+        <div style={{fontSize:11,color:c.muted,marginBottom:6}}>キーワード（1行に1つ）</div>
+        <textarea value={keywordsText} onChange={e=>setKeywordsText(e.target.value)} rows={5}
+          style={{width:"100%",padding:8,borderRadius:6,border:"1px solid "+c.border,background:c.bg2,color:c.text,fontSize:12,fontFamily:"monospace",resize:"vertical"}} />
+      </div>
+
+      <div style={{marginBottom:14}}>
+        <div style={{fontSize:11,color:c.muted,marginBottom:6}}>発行年（空欄=全期間）</div>
+        <select value={yearFilter} onChange={e=>setYearFilter(e.target.value)}
+          style={{width:"100%",padding:"7px 8px",borderRadius:7,border:"1px solid "+c.border,background:c.bg2,color:c.text,fontSize:12,cursor:"pointer"}}>
+          <option value="">すべて</option>{[2026,2025,2024,2023,2022].map(y=><option key={y} value={y}>{y}</option>)}
+        </select>
+      </div>
+
+      <button onClick={runPreview} disabled={previewPhase==="running"||batchSelCompanies.length===0}
+        style={{width:"100%",padding:"9px 0",borderRadius:7,border:"none",background:previewPhase==="running"?c.bg3:"#34d399",color:"#000",fontWeight:700,fontSize:13,cursor:"pointer",marginBottom:14}}>
+        {previewPhase==="running"?"件数を確認中...":"① 件数をプレビュー（まだAI分析は実行しません）"}
+      </button>
+
+      {queue.length > 0 && (
+        <div style={{marginBottom:14}}>
+          <div style={{fontSize:11,color:c.muted,marginBottom:6}}>実行キュー（{queue.filter(q=>q.checked).length}/{queue.length}件選択中）</div>
+          {queue.some(q=>q.count>800) && (
+            <div style={{fontSize:10,color:c.amber,marginBottom:6,padding:"4px 8px",background:"#1a1200",borderRadius:5}}>
+              ⚠️ 800件を超える組み合わせは自動でチェックを外しています
+            </div>
+          )}
+          <div style={{maxHeight:260,overflowY:"auto",border:"1px solid "+c.border,borderRadius:6}}>
+            {queue.map((q,i) => (
+              <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",borderBottom:"1px solid "+c.border}}>
+                <input type="checkbox" checked={q.checked} onChange={()=>toggleQueueItem(i)} disabled={runPhase==="running"} />
+                <span style={{fontSize:11,color:c.text,flex:1}}>{q.companyName} × "{q.keyword}"</span>
+                <span style={{fontSize:10,color:q.count>800?c.amber:c.muted}}>{q.count===null?"エラー":q.count+"件"}</span>
+                <span style={{fontSize:10,color:q.status==="done"?"#34d399":q.status==="error"?"#f87171":q.status==="running"?c.cyan:c.muted}}>
+                  {q.status==="done"?"✓完了":q.status==="error"?"✗失敗":q.status==="running"?"実行中":""}
+                </span>
+              </div>
+            ))}
+          </div>
+          <button onClick={runBatch} disabled={runPhase==="running"||queue.filter(q=>q.checked).length===0}
+            style={{width:"100%",padding:"9px 0",borderRadius:7,border:"none",background:runPhase==="running"?c.bg3:c.amber,color:"#000",fontWeight:700,fontSize:13,cursor:"pointer",marginTop:10}}>
+            {runPhase==="running"?"実行中... "+runProgress.done+"/"+runProgress.total+"（"+runProgress.label+"）":"② チェック済み"+queue.filter(q=>q.checked).length+"件を一括実行"}
+          </button>
+          {runPhase==="running" && (
+            <>
+              <div style={{height:5,background:c.bg2,borderRadius:3,overflow:"hidden",marginTop:6}}>
+                <div style={{height:"100%",background:"linear-gradient(90deg,#34d399,#6ee7b7)",borderRadius:3,
+                  width:runProgress.total>0?(runProgress.done/runProgress.total*100)+"%":"0%",transition:"width .3s"}}/>
+              </div>
+              <button onClick={()=>stopRef.current=true}
+                style={{width:"100%",padding:"5px",borderRadius:5,border:"1px solid "+c.border,background:"transparent",color:c.amber,fontSize:11,cursor:"pointer",marginTop:6}}>
+                ⏹ 停止
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {runPhase==="done" && companyIds.length > 0 && (
+        <div>
+          <div style={{fontSize:11,color:c.muted,marginBottom:6}}>③ 完了した企業からPDFを出力</div>
+          {companyIds.map(slug => {
+            const items = queue.filter(q=>q.companySlug===slug);
+            const doneCount = items.filter(q=>q.status==="done").length;
+            const companyName = items[0]?.companyName || slug;
+            if (doneCount === 0) return null;
+            return (
+              <button key={slug} onClick={()=>exportCompanyPDF(slug)}
+                style={{width:"100%",padding:"7px 0",borderRadius:6,border:"1px solid #16a34a",background:"transparent",color:"#16a34a",fontSize:11,fontWeight:600,cursor:"pointer",marginBottom:6}}>
+                📄 {companyName} のPDFを出力（{doneCount}キーワード分）
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function PaperExplorer({ supabaseUrl, supabaseKey, claudeApiKey, companies, c, card }) {
   const [results, setResults]     = useState([]);
@@ -21,6 +315,7 @@ export default function PaperExplorer({ supabaseUrl, supabaseKey, claudeApiKey, 
   const [analyzePhase, setAnalyzePhase] = useState("idle");
   const [analysis, setAnalysis]     = useState(null);
   const [showAnalysis, setShowAnalysis] = useState(true);
+  const [batchMode, setBatchMode] = useState(false);
 
   const GROUP_LABELS = {group_west:"欧米",group_china:"中国",group_japan:"日本",group_beauty:"化粧品"};
   const coMap = useMemo(()=>Object.fromEntries((companies||[]).map(co=>[co.id,co])),[companies]);
@@ -403,11 +698,19 @@ export default function PaperExplorer({ supabaseUrl, supabaseKey, claudeApiKey, 
               </button>
             </>
           )}
+          <button onClick={()=>setBatchMode(m=>!m)}
+            style={{width:"100%",padding:"8px",borderRadius:7,border:"1px solid "+(batchMode?"#34d399":c.border),background:batchMode?"#052e2b":"transparent",color:batchMode?"#34d399":c.muted,fontSize:11,fontWeight:700,cursor:"pointer",marginTop:10}}>
+            {batchMode ? "🗂️ 一括分析モード（ON） — 通常検索に戻す" : "🗂️ 一括分析モードに切替（複数企業×複数キーワード）"}
+          </button>
         </div>
       </div>
 
       {/* ===== 右: 結果 ===== */}
       <div style={{flex:1,overflowY:"auto",padding:"10px 16px"}}>
+        {batchMode ? (
+          <PaperBatchAnalysisPanel companies={companies} supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} claudePost={claudePost} GROUP_LABELS={GROUP_LABELS} c={c}/>
+        ) : (
+        <>
         {err && <div style={{padding:"8px 12px",background:"#1a1000",borderRadius:6,fontSize:11,color:c.amber,marginBottom:10}}>{err}</div>}
 
         {/* AI分析プログレス */}
@@ -542,6 +845,8 @@ export default function PaperExplorer({ supabaseUrl, supabaseKey, claudeApiKey, 
           <span style={{padding:"6px 14px",fontSize:12,color:c.muted}}>{page+1} / {totalPages}</span>
           <button onClick={()=>doSearch(page+1)} disabled={page>=totalPages-1} style={{padding:"6px 14px",borderRadius:6,border:"1px solid "+c.border,background:"transparent",color:page>=totalPages-1?c.muted:c.text,cursor:page>=totalPages-1?"not-allowed":"pointer"}}>次 →</button>
         </div>)}
+        </>
+        )}
       </div>
     </div>
   );
