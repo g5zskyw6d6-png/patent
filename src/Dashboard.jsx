@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import TechPortfolio from "./TechPortfolio";
 import PaperExplorer from "./PaperExplorer";
+import { generatePaperAnalysisHTML, printPaperHTML } from "./paperReportUtils";
 import BurstDetector from "./BurstDetector";
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -2239,6 +2240,16 @@ function AnalyzeTab({ sbGet, supabaseUrl, supabaseKey, companies, c, card }) {
                   onClick={() => printToPDF(
                     selRow.company_name + "_AI分析レポート",
                     generatePortfolioHTML(co || {name: selRow.company_name}, analysis, {total_patents: analysis.totalPatents, analyzed_at: analysis.analyzedAt})
+                  )}
+                  style={{marginLeft:"auto",padding:"6px 16px",borderRadius:6,border:"1px solid #16a34a",background:"transparent",color:"#16a34a",fontSize:12,fontWeight:600,cursor:"pointer"}}>
+                  📄 PDFで出力する
+                </button>
+              )}
+              {analysis.kind === "paper" && (
+                <button
+                  onClick={() => printPaperHTML(
+                    (analysis.filterDesc || "論文分析") + "_AI分析レポート",
+                    generatePaperAnalysisHTML(analysis.filterDesc, {...analysis, totalCount: analysis.totalPatents})
                   )}
                   style={{marginLeft:"auto",padding:"6px 16px",borderRadius:6,border:"1px solid #16a34a",background:"transparent",color:"#16a34a",fontSize:12,fontWeight:600,cursor:"pointer"}}>
                   📄 PDFで出力する
