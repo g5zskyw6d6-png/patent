@@ -300,7 +300,8 @@ export default function PaperExplorer({ supabaseUrl, supabaseKey, claudeApiKey, 
   const [showAnalysis, setShowAnalysis] = useState(true);
   const [batchMode, setBatchMode] = useState(false);
 
-  const GROUP_LABELS = {group_west:"欧米",group_china:"中国",group_japan:"日本",group_beauty:"化粧品"};
+  const GROUP_LABELS = {group_west:"欧米",group_china:"中国",group_japan:"日本",group_beauty:"化粧品",group_fermentation:"発酵・バイオ"};
+
   const coMap = useMemo(()=>Object.fromEntries((companies||[]).map(co=>[co.id,co])),[companies]);
   const coName = slug => coMap[slug]?.name||slug;
 
