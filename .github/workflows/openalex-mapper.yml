@@ -1,0 +1,28 @@
+name: OpenAlex Institution Mapper (Fermentation)
+
+on:
+  workflow_dispatch:  # 手動実行ボタン
+
+jobs:
+  map-institutions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run OpenAlex institution mapper
+        run: node openalex-mapper-fermentation.mjs
+        env:
+          OPENALEX_API_KEY: ${{ secrets.OPENALEX_API_KEY }}
+
+      - name: Upload results as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: openalex-fermentation-candidates
+          path: openalex_fermentation_candidates.json
+          retention-days: 30
