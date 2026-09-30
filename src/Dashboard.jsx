@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import * as XLSX from "xlsx";
 import TechPortfolio from "./TechPortfolio";
 import PaperExplorer from "./PaperExplorer";
 import { generatePaperAnalysisHTML, printPaperHTML } from "./paperReportUtils";
@@ -33,6 +34,34 @@ function buildKeywordFilter(raw) {
   if (orT.length > 0) f.push(`or=(${orT.map(t => `title.ilike.*${t}*,abstract_text.ilike.*${t}*`).join(",")})`);
   for (const t of notT) { f.push(`title=not.ilike.*${t}*`); f.push(`abstract_text=not.ilike.*${t}*`); }
   return f.join("&");
+}
+
+/* ━━━ Supabase REST：ページング付き全件取得（分析一覧の200件制限の解消） ━━━━━━━
+   単純に limit=N を大きくするだけだと将来また上限に当たるため、
+   Range ヘッダーで 1000 件ずつページングし、保存されている分析データを
+   すべて取得し終えるまでループする。 */
+async function sbGetAllRows(baseUrl, apikey, pathWithoutLimit, profile) {
+  const PAGE_SIZE = 1000;
+  const MAX_PAGES = 200; // 安全弁（最大 20 万件まで）
+  const all = [];
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const from = page * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+    const headers = {
+      apikey,
+      Authorization: "Bearer " + apikey,
+      Range: from + "-" + to,
+      Prefer: "count=exact",
+    };
+    if (profile) headers["Accept-Profile"] = profile;
+    const res = await fetch(baseUrl + "/rest/v1/" + pathWithoutLimit, { headers });
+    if (!res.ok && res.status !== 206) break;
+    const rows = await res.json();
+    if (!Array.isArray(rows) || rows.length === 0) break;
+    all.push(...rows);
+    if (rows.length < PAGE_SIZE) break; // 最終ページ
+  }
+  return all;
 }
 
 /* ━━━ PDF出力ユーティリティ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
@@ -1980,12 +2009,19 @@ function AnalyzeTab({ sbGet, supabaseUrl, supabaseKey, companies, c, card }) {
   const [showList,    setShowList]    = useState(true);
   const [listTab,     setListTab]     = useState("patent");  // 左パネルの表示タブ
 
+  // ── 一括保存（複数選択→PDF/Excel）用の選択状態 ──────────────────
+  const [checkedPatent, setCheckedPatent] = useState(() => new Set()); // "company_id||date_from||date_to||keyword"
+  const [checkedPaper,  setCheckedPaper]  = useState(() => new Set()); // id
+  const [bulkBusy,      setBulkBusy]      = useState(""); // "" | "pdf" | "excel"
+
   useEffect(() => { loadAllAnalyses(); loadAllPaperAnalyses(); }, []);
 
   const loadAllAnalyses = async () => {
     try {
-      const rows = await sbGet(
-        "portfolio_analyses?select=company_id,company_name,keyword,date_from,date_to,total_patents,analyzed_at&order=analyzed_at.desc&limit=200"
+      const rows = await sbGetAllRows(
+        supabaseUrl, supabaseKey,
+        "portfolio_analyses?select=company_id,company_name,keyword,date_from,date_to,total_patents,analyzed_at&order=analyzed_at.desc",
+        null
       );
       setAllAnalyses(rows || []);
     } catch(e) {}
@@ -1993,16 +2029,162 @@ function AnalyzeTab({ sbGet, supabaseUrl, supabaseKey, companies, c, card }) {
 
   // company_id/date_from/date_to/keyword が同じ行を指し示すためのクエリ条件片
   const kwCond = (row) => row.keyword ? "&keyword=eq."+encodeURIComponent(row.keyword) : "&keyword=is.null";
+  const patentKey = (row) => [row.company_id, row.date_from, row.date_to, row.keyword||""].join("||");
 
   const loadAllPaperAnalyses = async () => {
     try {
-      const res = await fetch(
-        (supabaseUrl||"") + "/rest/v1/paper_analyses?select=id,filter_desc,total_papers,analyzed_at&order=analyzed_at.desc&limit=200",
-        { headers: { apikey: supabaseKey, Authorization: "Bearer "+supabaseKey, "Accept-Profile": "openalex" } }
+      const rows = await sbGetAllRows(
+        supabaseUrl, supabaseKey,
+        "paper_analyses?select=id,filter_desc,total_papers,analyzed_at&order=analyzed_at.desc",
+        "openalex"
       );
-      const rows = await res.json();
-      setAllPaperAnalyses(Array.isArray(rows) ? rows : []);
+      setAllPaperAnalyses(rows);
     } catch(e) {}
+  };
+
+  // 一覧の要約行から、PDF/Excel出力に必要なフル分析データを取得する
+  // （selectRow/selectPaperRow と同じ取得ロジックを、UI状態に触れない形に切り出したもの）
+  const fetchPatentAnalysisDetail = async (row) => {
+    const rows = await sbGet(
+      "portfolio_analyses?company_id=eq."+row.company_id
+      +"&date_from=eq."+row.date_from+"&date_to=eq."+row.date_to
+      +kwCond(row)
+      +"&select=*&order=analyzed_at.desc&limit=1"
+    );
+    if (!rows || rows.length === 0) return null;
+    const r = rows[0];
+    const cats   = typeof r.categories === "string" ? JSON.parse(r.categories) : (r.categories || []);
+    const trends = typeof r.trends     === "string" ? JSON.parse(r.trends)     : (r.trends     || []);
+    return { kind:"patent", row, categories:cats, trends, impact2050:r.impact2050, strategic:r.strategic, topPatent:r.top_patent, analyzedAt:r.analyzed_at, totalPatents:r.total_patents, keyword:r.keyword };
+  };
+
+  const fetchPaperAnalysisDetail = async (row) => {
+    const res = await fetch(
+      (supabaseUrl||"") + "/rest/v1/paper_analyses?id=eq."+row.id+"&select=*",
+      { headers: { apikey: supabaseKey, Authorization: "Bearer "+supabaseKey, "Accept-Profile": "openalex" } }
+    );
+    const rows = await res.json();
+    if (!rows || rows.length === 0) return null;
+    const r = rows[0];
+    const cats   = typeof r.categories === "string" ? JSON.parse(r.categories) : (r.categories || []);
+    const trends = typeof r.trends     === "string" ? JSON.parse(r.trends)     : (r.trends     || []);
+    return { kind:"paper", row, categories:cats, trends, impact2050:r.impact2040, strategic:r.strategic, topPatent:r.notable, analyzedAt:r.analyzed_at, totalPatents:r.total_papers, filterDesc:r.filter_desc };
+  };
+
+  const toggleChecked = (setFn, key) => {
+    setFn(prev => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; });
+  };
+  const toggleAllPatent = () => {
+    setCheckedPatent(prev => prev.size === allAnalyses.length ? new Set() : new Set(allAnalyses.map(patentKey)));
+  };
+  const toggleAllPaper = () => {
+    setCheckedPaper(prev => prev.size === allPaperAnalyses.length ? new Set() : new Set(allPaperAnalyses.map(r=>r.id)));
+  };
+
+  const selectedRows = () => listTab === "patent"
+    ? allAnalyses.filter(row => checkedPatent.has(patentKey(row)))
+    : allPaperAnalyses.filter(row => checkedPaper.has(row.id));
+
+  // ── 選択した複数件を1つのPDFにまとめて出力（1件ごとに改ページ） ──
+  const bulkExportPDF = async () => {
+    const rows = selectedRows();
+    if (rows.length === 0) return;
+    setBulkBusy("pdf"); setErr("");
+    try {
+      const parts = [];
+      for (const row of rows) {
+        const detail = listTab === "patent" ? await fetchPatentAnalysisDetail(row) : await fetchPaperAnalysisDetail(row);
+        if (!detail) continue;
+        const rowCo = listTab === "patent" ? companies.find(c => c.id === row.company_id) : null;
+        const html = listTab === "patent"
+          ? generatePortfolioHTML(rowCo || {name: row.company_name}, detail, {total_patents: detail.totalPatents, analyzed_at: detail.analyzedAt})
+          : generatePaperAnalysisHTML(detail.filterDesc, {...detail, totalCount: detail.totalPatents});
+        parts.push('<div style="' + (parts.length > 0 ? 'page-break-before:always;' : '') + '">' + html + '</div>');
+      }
+      if (parts.length === 0) { setErr("選択した分析データを取得できませんでした。"); setBulkBusy(""); return; }
+      printToPDF(
+        (listTab === "patent" ? "特許分析" : "論文分析") + "_一括AI分析レポート_" + rows.length + "件",
+        parts.join("\n")
+      );
+    } catch(e) {
+      setErr("一括PDF出力エラー: " + e.message);
+    }
+    setBulkBusy("");
+  };
+
+  // ── 選択した複数件をExcel（.xlsx）にまとめて出力 ──
+  // シート構成：「一覧」= 選択した分析の概要一覧 + 「テーマ／トレンド」= カテゴリ・トレンドの明細
+  const bulkExportExcel = async () => {
+    const rows = selectedRows();
+    if (rows.length === 0) return;
+    setBulkBusy("excel"); setErr("");
+    try {
+      const summarySheet = [];
+      const detailSheet = [];
+      if (listTab === "patent") {
+        summarySheet.push(["企業名","キーワード","期間(from)","期間(to)","対象特許数","分析日時"]);
+        detailSheet.push(["企業名","キーワード","分類種別","名称/タイトル","比率(%)/説明","説明"]);
+      } else {
+        summarySheet.push(["フィルター内容","対象論文数","分析日時"]);
+        detailSheet.push(["フィルター内容","分類種別","名称/タイトル","比率(%)/説明","説明"]);
+      }
+
+      for (const row of rows) {
+        const detail = listTab === "patent" ? await fetchPatentAnalysisDetail(row) : await fetchPaperAnalysisDetail(row);
+        if (!detail) continue;
+        const label = listTab === "patent" ? row.company_name : (row.filter_desc || "フィルターなし");
+
+        if (listTab === "patent") {
+          summarySheet.push([row.company_name, row.keyword||"", row.date_from, row.date_to, detail.totalPatents, new Date(detail.analyzedAt).toLocaleString("ja-JP")]);
+        } else {
+          summarySheet.push([label, detail.totalPatents, new Date(detail.analyzedAt).toLocaleString("ja-JP")]);
+        }
+
+        (detail.categories||[]).forEach(cat => {
+          const r = listTab === "patent"
+            ? [row.company_name, row.keyword||"", "カテゴリ", cat.name, cat.pct+"%", cat.desc||""]
+            : [label, "カテゴリ", cat.name, cat.pct+"%", cat.desc||""];
+          detailSheet.push(r);
+        });
+        (detail.trends||[]).forEach((t,i) => {
+          const r = listTab === "patent"
+            ? [row.company_name, row.keyword||"", "トレンド"+(i+1), t.title, "", t.body||""]
+            : [label, "トレンド"+(i+1), t.title, "", t.body||""];
+          detailSheet.push(r);
+        });
+        if (detail.impact2050) {
+          const r = listTab === "patent"
+            ? [row.company_name, row.keyword||"", "2050年シナリオ", "", "", detail.impact2050]
+            : [label, "2040年シナリオ", "", "", detail.impact2050];
+          detailSheet.push(r);
+        }
+        if (detail.strategic) {
+          const r = listTab === "patent"
+            ? [row.company_name, row.keyword||"", "戦略的示唆", "", "", detail.strategic]
+            : [label, "戦略的示唆", "", "", detail.strategic];
+          detailSheet.push(r);
+        }
+        if (detail.topPatent) {
+          const r = listTab === "patent"
+            ? [row.company_name, row.keyword||"", "最注目特許", "", "", detail.topPatent]
+            : [label, "最注目論文", "", "", detail.topPatent];
+          detailSheet.push(r);
+        }
+      }
+
+      if (summarySheet.length <= 1) { setErr("選択した分析データを取得できませんでした。"); setBulkBusy(""); return; }
+
+      const wb = XLSX.utils.book_new();
+      const ws1 = XLSX.utils.aoa_to_sheet(summarySheet);
+      const ws2 = XLSX.utils.aoa_to_sheet(detailSheet);
+      XLSX.utils.book_append_sheet(wb, ws1, "一覧");
+      XLSX.utils.book_append_sheet(wb, ws2, "テーマ・トレンド");
+      const fname = (listTab === "patent" ? "特許分析" : "論文分析") + "_一括分析結果_" + rows.length + "件_" + new Date().toISOString().slice(0,10) + ".xlsx";
+      XLSX.writeFile(wb, fname);
+    } catch(e) {
+      setErr("一括Excel出力エラー: " + e.message);
+    }
+    setBulkBusy("");
   };
 
   const selectRow = async (row) => {
@@ -2079,6 +2261,31 @@ function AnalyzeTab({ sbGet, supabaseUrl, supabaseKey, companies, c, card }) {
           </div>
           <div style={{fontSize:10,color:c.muted}}>{listTab==="patent" ? allAnalyses.length : allPaperAnalyses.length}件</div>
         </div>
+        {((listTab==="patent" && allAnalyses.length>0) || (listTab==="paper" && allPaperAnalyses.length>0)) && (
+          <div style={{padding:"8px 10px",borderBottom:"1px solid "+c.border}}>
+            <label style={{display:"flex",alignItems:"center",gap:6,fontSize:10,color:c.muted,cursor:"pointer",marginBottom:6}}>
+              <input type="checkbox"
+                checked={listTab==="patent" ? (allAnalyses.length>0 && checkedPatent.size===allAnalyses.length) : (allPaperAnalyses.length>0 && checkedPaper.size===allPaperAnalyses.length)}
+                onChange={listTab==="patent" ? toggleAllPatent : toggleAllPaper}
+              />
+              全選択（{listTab==="patent" ? checkedPatent.size : checkedPaper.size}件選択中）
+            </label>
+            <div style={{display:"flex",gap:4}}>
+              <button
+                disabled={(listTab==="patent"?checkedPatent.size:checkedPaper.size)===0 || bulkBusy!==""}
+                onClick={bulkExportPDF}
+                style={{flex:1,padding:"5px 6px",borderRadius:5,border:"1px solid #16a34a",background:"transparent",color:"#16a34a",fontSize:10,fontWeight:600,cursor:(listTab==="patent"?checkedPatent.size:checkedPaper.size)===0?"default":"pointer",opacity:(listTab==="patent"?checkedPatent.size:checkedPaper.size)===0?0.4:1}}>
+                {bulkBusy==="pdf" ? "出力中…" : "📄 一括PDF"}
+              </button>
+              <button
+                disabled={(listTab==="patent"?checkedPatent.size:checkedPaper.size)===0 || bulkBusy!==""}
+                onClick={bulkExportExcel}
+                style={{flex:1,padding:"5px 6px",borderRadius:5,border:"1px solid #22c55e",background:"transparent",color:"#22c55e",fontSize:10,fontWeight:600,cursor:(listTab==="patent"?checkedPatent.size:checkedPaper.size)===0?"default":"pointer",opacity:(listTab==="patent"?checkedPatent.size:checkedPaper.size)===0?0.4:1}}>
+                {bulkBusy==="excel" ? "出力中…" : "📊 一括Excel"}
+              </button>
+            </div>
+          </div>
+        )}
         <div style={{flex:1,overflowY:"auto",padding:"8px"}}>
           {totalCount === 0 && (
             <div style={{textAlign:"center",paddingTop:40,color:c.muted}}>
@@ -2104,6 +2311,7 @@ function AnalyzeTab({ sbGet, supabaseUrl, supabaseKey, companies, c, card }) {
               <div key={"pat"+i}
                 style={{padding:"10px 12px",borderRadius:7,marginBottom:4,background:isActive?"#0c2d42":"transparent",border:"1px solid "+(isActive?c.cyan:c.border),transition:"background .1s"}}>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4,cursor:"pointer"}} onClick={() => selectRow(row)}>
+                  <input type="checkbox" onClick={(e)=>e.stopPropagation()} checked={checkedPatent.has(patentKey(row))} onChange={()=>toggleChecked(setCheckedPatent, patentKey(row))} style={{flexShrink:0}}/>
                   <span style={{fontSize:13}}>{rowCo?.flag || "🔍"}</span>
                   <span style={{fontSize:12,fontWeight:600,color:isActive?c.cyan:c.text,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",cursor:"pointer"}}>
                     {row.company_name}
@@ -2157,6 +2365,7 @@ function AnalyzeTab({ sbGet, supabaseUrl, supabaseKey, companies, c, card }) {
               <div key={"pap"+i}
                 style={{padding:"10px 12px",borderRadius:7,marginBottom:4,background:isActive?"#052e2b":"transparent",border:"1px solid "+(isActive?"#34d399":c.border),transition:"background .1s"}}>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4,cursor:"pointer"}} onClick={() => selectPaperRow(row)}>
+                  <input type="checkbox" onClick={(e)=>e.stopPropagation()} checked={checkedPaper.has(row.id)} onChange={()=>toggleChecked(setCheckedPaper, row.id)} style={{flexShrink:0}}/>
                   <span style={{fontSize:13}}>📄</span>
                   <span style={{fontSize:12,fontWeight:600,color:isActive?"#34d399":c.text,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",cursor:"pointer"}}>
                     {row.filter_desc || "フィルターなし"}
