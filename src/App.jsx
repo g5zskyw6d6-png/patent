@@ -96,14 +96,27 @@ async function savePatentsToDB(company, patents) {
 // （サービスアカウント鍵をブラウザに露出させないため）。
 async function fetchPatentsGoogle(legalNames, from, to) {
   const names = Array.isArray(legalNames) ? legalNames.filter(Boolean) : [legalNames];
-  const res = await fetchWithRetry("/api/gpatents-search", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ legalNames: names, dateFrom: from, dateTo: to, countries: TARGET_COUNTRIES }),
-  }, 2);
+  // ★ fetchWithRetryは5xxを retries 回試した末に Error("HTTP "+status) を投げるだけで
+  //   レスポンス本文を読めなくしてしまうため、ここでは直接fetchしてエラー詳細を読む。
+  let res;
+  try {
+    res = await fetch("/api/gpatents-search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ legalNames: names, dateFrom: from, dateTo: to }),
+    });
+  } catch (e) {
+    throw new Error("Google Patents検索失敗(通信エラー): " + e.message);
+  }
   if (!res.ok) {
-    const txt = await res.text().catch(()=> "");
-    throw new Error("Google Patents検索失敗 ("+res.status+"): "+txt.slice(0,300));
+    let detail = "";
+    try {
+      const body = await res.json();
+      detail = body?.error || JSON.stringify(body);
+    } catch {
+      detail = await res.text().catch(() => "");
+    }
+    throw new Error("Google Patents検索失敗 (" + res.status + "): " + detail.slice(0, 500));
   }
   const data = await res.json();
   return { patents: data.patents || [], total_patent_count: data.total_patent_count || 0 };
