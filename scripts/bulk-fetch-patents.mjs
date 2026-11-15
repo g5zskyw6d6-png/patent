@@ -150,14 +150,20 @@ function buildQuery() {
           (SELECT text FROM UNNEST(p.abstract_localized) WHERE language = 'en' LIMIT 1),
           (SELECT text FROM UNNEST(p.abstract_localized) LIMIT 1)
         ) AS abstract_en,
-        COALESCE(
+        -- ★ claims_text/description_textはSQL側でSUBSTRして長さを制限する。
+        --   後段のJS側でもdescription_textは30000文字に切り詰めていたが、
+        --   制限前の全文をBigQueryから転送するとNode側のJSONパース時に
+        --   メモリを大量消費し(117社分×全世界2〜3年分の結果セットで
+        --   OOM/JavaScript heap out of memoryが発生した実績あり)、
+        --   スキャン課金額には影響しないため早めに切り詰めておく。
+        SUBSTR(COALESCE(
           (SELECT text FROM UNNEST(p.claims_localized) WHERE language = 'en' LIMIT 1),
           (SELECT text FROM UNNEST(p.claims_localized) LIMIT 1)
-        ) AS claims_text,
-        COALESCE(
+        ), 1, 50000) AS claims_text,
+        SUBSTR(COALESCE(
           (SELECT text FROM UNNEST(p.description_localized) WHERE language = 'en' LIMIT 1),
           (SELECT text FROM UNNEST(p.description_localized) LIMIT 1)
-        ) AS description_text,
+        ), 1, 35000) AS description_text,
         ARRAY(SELECT name FROM UNNEST(p.inventor_harmonized)) AS inventors,
         ARRAY(SELECT code FROM UNNEST(p.cpc)) AS cpc_codes
       FROM \`patents-public-data.patents.publications\` p
@@ -178,66 +184,33 @@ function buildQuery() {
   `;
 }
 
-async function runQuery(bigquery, companyEntries) {
-  const query = buildQuery();
-  const params = {
-    companies: companyEntries,
-    dateFromNum: toYYYYMMDD(DATE_FROM),
-    dateToNum: toYYYYMMDD(DATE_TO),
+function rowToPatentsByCompany(r, companiesById) {
+  // 1行(1ファミリー代表レコード)から、マッチした各企業ぶんのpatents行を作る。
+  const { independent } = splitClaims(r.claims_text);
+  const pubDateStr = r.publication_date
+    ? String(r.publication_date).replace(/^(\d{4})(\d{2})(\d{2})$/, '$1-$2-$3')
+    : null;
+  const base = {
+    patent_number: r.publication_number,
+    title_en: r.title_en || '(タイトル未取得)',
+    publication_date: pubDateStr,
+    country: r.country_code,
+    abstract_epo: r.abstract_en || null,
+    inventors: r.inventors && r.inventors.length > 0 ? r.inventors : null,
+    claims_independent: independent || null,
+    description_text: r.description_text ? r.description_text.slice(0, 30000) : null,
+    cpc: r.cpc_codes && r.cpc_codes.length > 0 ? r.cpc_codes : null,
+    family_id: r.family_id || null,
+    classifications_fetched_at: r.cpc_codes && r.cpc_codes.length > 0 ? new Date().toISOString() : null,
   };
-  const types = {
-    companies: [{ id: 'STRING', pattern: 'STRING' }],
-  };
-
-  // まず dry-run でスキャン見積もりを確認する(課金なし)
-  const [dryJob] = await bigquery.createQueryJob({ query, location: 'US', params, types, dryRun: true });
-  const estBytes = Number(dryJob.metadata.statistics.totalBytesProcessed || 0);
-  console.log(`📊 スキャン見積もり: ${(estBytes / 1024 ** 4).toFixed(3)} TiB`);
-
-  if (DRY_RUN) {
-    console.log('DRY_RUN=true のため、ここで終了します(実クエリは実行していません)。');
-    process.exit(0);
+  const out = [];
+  const matchedIds = [...new Set(r.matched_company_ids || [])];
+  for (const cid of matchedIds) {
+    const company = companiesById.get(cid);
+    if (!company) continue; // 念のため(通常は起きない)
+    out.push({ ...base, company_id: company.id, company_name: company.name });
   }
-
-  const [rows] = await bigquery.query({
-    query,
-    location: 'US',
-    params,
-    types,
-    maximumBytesBilled: MAX_BYTES_BILLED,
-  });
-  return rows;
-}
-
-function rowsToPatentsByCompany(rows, companiesById) {
-  const byCompany = new Map(); // company_id -> patent rows[]
-  for (const r of rows) {
-    const { independent } = splitClaims(r.claims_text);
-    const pubDateStr = r.publication_date
-      ? String(r.publication_date).replace(/^(\d{4})(\d{2})(\d{2})$/, '$1-$2-$3')
-      : null;
-    const patent = {
-      patent_number: r.publication_number,
-      title_en: r.title_en || '(タイトル未取得)',
-      publication_date: pubDateStr,
-      country: r.country_code,
-      abstract_epo: r.abstract_en || null,
-      inventors: r.inventors && r.inventors.length > 0 ? r.inventors : null,
-      claims_independent: independent || null,
-      description_text: r.description_text ? r.description_text.slice(0, 30000) : null,
-      cpc: r.cpc_codes && r.cpc_codes.length > 0 ? r.cpc_codes : null,
-      family_id: r.family_id || null,
-      classifications_fetched_at: r.cpc_codes && r.cpc_codes.length > 0 ? new Date().toISOString() : null,
-    };
-    const matchedIds = [...new Set(r.matched_company_ids || [])];
-    for (const cid of matchedIds) {
-      const company = companiesById.get(cid);
-      if (!company) continue; // 念のため(通常は起きない)
-      if (!byCompany.has(cid)) byCompany.set(cid, []);
-      byCompany.get(cid).push({ ...patent, company_id: company.id, company_name: company.name });
-    }
-  }
-  return byCompany;
+  return out;
 }
 
 async function upsertCompanyPatents(companyId, companyName, rows) {
@@ -268,6 +241,30 @@ async function upsertCompanyPatents(companyId, companyName, rows) {
   return { inserted: rows.length, error: null };
 }
 
+const FLUSH_THRESHOLD = 500; // バッファ合計がこの件数を超えたら逐次Supabaseへ書き出す
+
+async function flushBuffers(buffers, companiesById, stats) {
+  const cids = [...buffers.keys()].filter(cid => buffers.get(cid).length > 0);
+  for (const cid of cids) {
+    const rows = buffers.get(cid);
+    buffers.set(cid, []);
+    const company = companiesById.get(cid);
+    const withText = rows.filter(r => r.claims_independent || r.description_text).length;
+    const { inserted, error } = await upsertCompanyPatents(cid, company ? company.name : cid, rows);
+    const s = stats.get(cid) || { count: 0, withText: 0, error: null };
+    s.count += inserted;
+    s.withText += withText;
+    if (error) s.error = error;
+    stats.set(cid, s);
+  }
+}
+
+function totalBuffered(buffers) {
+  let n = 0;
+  for (const rows of buffers.values()) n += rows.length;
+  return n;
+}
+
 async function main() {
   console.log(`▶ 期間: ${DATE_FROM} 〜 ${DATE_TO}`);
 
@@ -285,32 +282,67 @@ async function main() {
   const credentials = JSON.parse(process.env.GCP_SA_KEY_JSON);
   const bigquery = new BigQuery({ projectId: process.env.GCP_PROJECT_ID, credentials });
 
-  const rows = await runQuery(bigquery, entries);
-  console.log(`▶ BigQueryから取得したファミリー代表レコード数: ${rows.length}`);
+  const query = buildQuery();
+  const params = {
+    companies: entries,
+    dateFromNum: toYYYYMMDD(DATE_FROM),
+    dateToNum: toYYYYMMDD(DATE_TO),
+  };
+  const types = { companies: [{ id: 'STRING', pattern: 'STRING' }] };
 
-  const byCompany = rowsToPatentsByCompany(rows, companiesById);
+  // まず dry-run でスキャン見積もりを確認する(課金なし)
+  const [dryJob] = await bigquery.createQueryJob({ query, location: 'US', params, types, dryRun: true });
+  const estBytes = Number(dryJob.metadata.statistics.totalBytesProcessed || 0);
+  console.log(`📊 スキャン見積もり: ${(estBytes / 1024 ** 4).toFixed(3)} TiB`);
 
-  const summary = [];
+  if (DRY_RUN) {
+    console.log('DRY_RUN=true のため、ここで終了します(実クエリは実行していません)。');
+    process.exit(0);
+  }
+
+  // ★ bigquery.query(...)は結果セット全体を1つの配列としてメモリに読み込むため、
+  //   対象企業・期間が広いと(全世界2〜3年分の請求項・明細書全文を含むため)
+  //   Node側でJavaScript heap out of memoryを起こす。createQueryStream()で
+  //   1行ずつストリーミングし、一定件数ごとにSupabaseへ書き出すことで
+  //   メモリ使用量を抑える。
+  const stream = bigquery.createQueryStream({
+    query,
+    location: 'US',
+    params,
+    types,
+    maximumBytesBilled: MAX_BYTES_BILLED,
+  });
+
+  const buffers = new Map(companies.map(c => [String(c.id), []]));
+  const stats = new Map(companies.map(c => [String(c.id), { count: 0, withText: 0, error: null }]));
+  let rowCount = 0;
+
+  for await (const r of stream) {
+    rowCount++;
+    const patentRows = rowToPatentsByCompany(r, companiesById);
+    for (const pr of patentRows) {
+      const cid = String(pr.company_id);
+      if (!buffers.has(cid)) buffers.set(cid, []);
+      buffers.get(cid).push(pr);
+    }
+    if (totalBuffered(buffers) >= FLUSH_THRESHOLD) {
+      await flushBuffers(buffers, companiesById, stats);
+    }
+  }
+  await flushBuffers(buffers, companiesById, stats);
+
+  console.log(`▶ BigQueryから取得したファミリー代表レコード数: ${rowCount}`);
+
+  console.log('\n=== 実行結果サマリー ===');
   let hadError = false;
   for (const company of companies) {
     const cid = String(company.id);
-    const companyRows = byCompany.get(cid) || [];
-    if (companyRows.length === 0) {
-      summary.push({ company: company.name, count: 0, withText: 0, error: null });
-      continue;
-    }
-    const withText = companyRows.filter(r => r.claims_independent || r.description_text).length;
-    const { inserted, error } = await upsertCompanyPatents(cid, company.name, companyRows);
-    if (error) hadError = true;
-    summary.push({ company: company.name, count: inserted, withText, error });
-  }
-
-  console.log('\n=== 実行結果サマリー ===');
-  for (const s of summary) {
+    const s = stats.get(cid) || { count: 0, withText: 0, error: null };
+    if (s.error) hadError = true;
     const mark = s.error ? '❌' : (s.count === 0 ? '— ' : '✅');
-    console.log(`${mark} ${s.company}: ${s.count}件 (請求項/明細書あり: ${s.withText}件)` + (s.error ? `  エラー: ${s.error}` : ''));
+    console.log(`${mark} ${company.name}: ${s.count}件 (請求項/明細書あり: ${s.withText}件)` + (s.error ? `  エラー: ${s.error}` : ''));
   }
-  const totalCount = summary.reduce((a, s) => a + s.count, 0);
+  const totalCount = [...stats.values()].reduce((a, s) => a + s.count, 0);
   console.log(`\n合計保存件数: ${totalCount}件`);
 
   if (hadError) {
