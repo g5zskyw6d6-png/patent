@@ -109,14 +109,19 @@ function buildQuery() {
     WITH all_in_range AS (
       SELECT
         p.family_id,
-        ARRAY(
-          SELECT DISTINCT c.id
-          FROM UNNEST(@companies) AS c
-          WHERE EXISTS (
-            SELECT 1 FROM UNNEST(p.assignee_harmonized) AS a
-            WHERE REGEXP_CONTAINS(REGEXP_REPLACE(LOWER(a.name), r'[^a-z0-9]', ''), c.pattern)
-          )
-        ) AS matched_ids
+        -- ★ EXISTS(...)を使った入れ子の相関サブクエリは、BigQueryのオプティマイザが
+        --   LEFT SEMI JOINとして実行しようとして
+        --   "LEFT SEMI JOIN cannot be used without a condition that is an equality
+        --   of fields from both sides of the join." というエラーになることがある
+        --   (正規表現マッチは等価条件ではないため)。
+        --   EXISTSを使わず、2つの配列(出願人名 × 企業パターン)の直積を
+        --   ARRAY_AGG(DISTINCT ...)で集約する形に書き換えることで回避する。
+        --   スキャン対象カラムは変わらないため、課金額への影響はない。
+        IFNULL((
+          SELECT ARRAY_AGG(DISTINCT c.id)
+          FROM UNNEST(p.assignee_harmonized) AS a, UNNEST(@companies) AS c
+          WHERE REGEXP_CONTAINS(REGEXP_REPLACE(LOWER(a.name), r'[^a-z0-9]', ''), c.pattern)
+        ), []) AS matched_ids
       FROM \`patents-public-data.patents.publications\` p
       WHERE p.publication_date BETWEEN @dateFromNum AND @dateToNum
         AND p.family_id IS NOT NULL AND p.family_id != '0'
