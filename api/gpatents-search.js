@@ -23,7 +23,7 @@
 
 import { BigQuery } from '@google-cloud/bigquery';
 
-export const config = { maxDuration: 800 };
+export const config = { maxDuration: 300 };
 
 function normalize(name) {
   return (name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
