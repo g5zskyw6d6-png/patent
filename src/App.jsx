@@ -7,8 +7,10 @@ const CLAUDE_API_KEY      = import.meta.env.VITE_CLAUDE_API_KEY;
 const SUPABASE_URL        = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY   = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// ★v2: 国を限定せず、ファミリー代表(最も請求項・明細書全文が充実した公開公報)を1件返す方式に変更。
+//   TARGET_COUNTRIES はAPIへのヒント用に残しているが、サーバー側では現在未使用。
 const TARGET_COUNTRIES = ["WO"];
-const COUNTRY_COLORS   = { US:"#38bdf8", WO:"#34d399", JP:"#f59e0b" };
+const COUNTRY_COLORS   = { US:"#38bdf8", WO:"#34d399", JP:"#f59e0b", EP:"#a78bfa", CN:"#f87171", KR:"#fb923c", DE:"#4ade80", GB:"#60a5fa", FR:"#fbbf24" };
 
 const LS_KEY = "patent_cache_v2";
 function saveToLS(co, pts, tot, f, t) {
@@ -68,58 +70,43 @@ async function sbUpsert(table, rows) {
 }
 async function savePatentsToDB(company, patents) {
   await sbUpsert("companies",[{id:company.id,name:company.name,legal:company.legal,sector:company.sector,flag:company.flag,group_id:company.group_id||null}]);
-  const rows = patents.map(p=>({patent_number:p.patent_number,title_en:p.patent_title,publication_date:p.patent_date||null,company_id:company.id,company_name:company.name,country:p.country,abstract_epo:p.patent_abstract||null,inventors:p.inventors&&p.inventors.length>0?p.inventors:null}));
+  // ★ Google Patents Datasets切り替え後は、請求項(独立項)・明細書全文・CPC・family_idも
+  //   初回取得時点でまとめて保存する（EPO版では別画面で後追い取得していた分）
+  const rows = patents.map(p=>({
+    patent_number:p.patent_number,
+    title_en:p.patent_title,
+    publication_date:p.patent_date||null,
+    company_id:company.id,
+    company_name:company.name,
+    country:p.country,
+    abstract_epo:p.patent_abstract||null,
+    inventors:p.inventors&&p.inventors.length>0?p.inventors:null,
+    claims_independent:p.claims_independent||null,
+    description_text:p.description_text||null,
+    cpc:p.cpc&&p.cpc.length>0?p.cpc:null,
+    family_id:p.family_id||null,
+    classifications_fetched_at:p.cpc&&p.cpc.length>0?new Date().toISOString():null,
+  }));
   for (let i=0;i<rows.length;i+=100){ await sbUpsert("patents",rows.slice(i,i+100)); await new Promise(r=>setTimeout(r,200)); }
 }
 
-async function getEPOToken() {
-  const res = await fetch("/api/epo/auth/accesstoken",{method:"POST",headers:{"Authorization":"Basic "+btoa(EPO_CONSUMER_KEY+":"+EPO_CONSUMER_SECRET),"Content-Type":"application/x-www-form-urlencoded"},body:"grant_type=client_credentials"});
-  if (!res.ok) throw new Error("EPO認証失敗: "+res.status);
-  return (await res.json()).access_token;
-}
-function parseXMLPatents(doc) {
-  const patents=[];
-  doc.querySelectorAll("exchange-document").forEach(ed=>{
-    const country=ed.getAttribute("country")||"",docNum=ed.getAttribute("doc-number")||"",kind=ed.getAttribute("kind")||"";
-    if (!TARGET_COUNTRIES.includes(country)) return;
-    let title="";
-    ed.querySelectorAll("invention-title").forEach(t=>{if(!title||t.getAttribute("lang")==="en")title=t.textContent.trim();});
-    let rawDate=ed.querySelector("publication-reference date")?.textContent?.trim()||"";
-    if(rawDate.length===8)rawDate=rawDate.slice(0,4)+"-"+rawDate.slice(4,6)+"-"+rawDate.slice(6,8);
-    let abstract="";
-    ed.querySelectorAll("abstract").forEach(a=>{if(!abstract||a.getAttribute("lang")==="en")abstract=Array.from(a.querySelectorAll("p")).map(p=>p.textContent.trim()).join(" ").trim();});
-    const inventors=[];
-    ed.querySelectorAll("inventor").forEach(inv=>{const n=inv.querySelector("name");if(n)inventors.push(n.textContent.trim());});
-    if(inventors.length===0)ed.querySelectorAll("applicant").forEach(ap=>{if(ap.getAttribute("app-type")==="inventor"){const n=ap.querySelector("name");if(n)inventors.push(n.textContent.trim());}});
-    if(docNum)patents.push({patent_number:country+docNum+kind,patent_title:title||"(タイトル未取得)",patent_date:rawDate,patent_abstract:abstract,inventors,country,docNum,kind});
-  });
-  return patents;
-}
-async function fetchPatents(legalNames, from, to) {
-  const token   = await getEPOToken();
-  const fromEPO = from.replace(/-/g, ""), toEPO = to.replace(/-/g, "");
-  // ★ 複数出願人名をOR条件で結合
-  const names   = Array.isArray(legalNames) ? legalNames.filter(Boolean) : [legalNames];
-  const paClause = names.map(n => `pa="${n}"`).join(" OR ");
-  const cql     = `(${paClause}) AND pd within "${fromEPO},${toEPO}" AND (${TARGET_COUNTRIES.map(c=>"pn="+c).join(" OR ")})`;
-  const headers = { "Authorization":"Bearer "+token, "Accept":"application/xml" };
-  // ★ /api/epo/[...path] の動的キャッチオールルートがVercel上で機能しないため、
-  //    静的な /api/epo-proxy?path=... 経由に変更（2026/8 対応）
-  const endpoint = "/api/epo-proxy?path=" + encodeURIComponent("published-data/search/biblio,abstract");
-  const parser  = new DOMParser();
-  const first   = await fetch(endpoint+"&q="+encodeURIComponent(cql)+"&Range=1-100", {headers});
-  if (!first.ok) { const txt=await first.text(); throw new Error("EPO検索失敗 ("+first.status+"): "+txt.slice(0,300)); }
-  const firstDoc   = parser.parseFromString(await first.text(), "application/xml");
-  const total      = parseInt(firstDoc.querySelector("biblio-search")?.getAttribute("total-result-count")||"0", 10);
-  const allPatents = parseXMLPatents(firstDoc);
-  for (let page=2; page<=Math.ceil(Math.min(total,2000)/100); page++) {
-    const start=(page-1)*100+1, end=Math.min(page*100, Math.min(total,2000));
-    const res = await fetch(endpoint+"&q="+encodeURIComponent(cql)+"&Range="+start+"-"+end, {headers});
-    if (!res.ok) break;
-    allPatents.push(...parseXMLPatents(parser.parseFromString(await res.text(),"application/xml")));
-    await new Promise(r=>setTimeout(r,300));
+// ━━━ Google Patents Public Datasets（BigQuery）経由の特許取得 ━━━━━━━━━━━━
+// 旧EPO OPS版(getEPOToken / parseXMLPatents / fetchPatents)を置き換え。
+// サーバーサイドの /api/gpatents-search が実際のBigQueryクエリを実行する
+// （サービスアカウント鍵をブラウザに露出させないため）。
+async function fetchPatentsGoogle(legalNames, from, to) {
+  const names = Array.isArray(legalNames) ? legalNames.filter(Boolean) : [legalNames];
+  const res = await fetchWithRetry("/api/gpatents-search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ legalNames: names, dateFrom: from, dateTo: to, countries: TARGET_COUNTRIES }),
+  }, 2);
+  if (!res.ok) {
+    const txt = await res.text().catch(()=> "");
+    throw new Error("Google Patents検索失敗 ("+res.status+"): "+txt.slice(0,300));
   }
-  return { patents:allPatents, total_patent_count:total };
+  const data = await res.json();
+  return { patents: data.patents || [], total_patent_count: data.total_patent_count || 0 };
 }
 
 export default function App() {
@@ -183,7 +170,7 @@ const loadFromDB = useCallback(async () => {
     if (!company) return;
     setPhase("fetching"); setErr(""); setDbStatus(""); setPatents([]);
     try {
-      const d = await fetchPatents(company.legal, dateFrom, dateTo);
+      const d = await fetchPatentsGoogle(company.legal, dateFrom, dateTo);
       setPatents(d.patents); setTotal(d.total_patent_count);
       saveToLS(company,d.patents,d.total_patent_count,dateFrom,dateTo);
       setCachedIds(getCachedIds()); setPhase("done");
@@ -193,7 +180,7 @@ const loadFromDB = useCallback(async () => {
         await savePatentsToDB(company,d.patents);
         setDbStatus("DB保存完了（"+d.patents.length+"件）");
       }
-    } catch(e){setErr("EPO API エラー: "+e.message);setPhase("idle");}
+    } catch(e){setErr("Google Patents APIエラー: "+e.message);setPhase("idle");}
   },[company,dateFrom,dateTo]);
 
   const selectCompany = co => {
@@ -227,18 +214,16 @@ const loadFromDB = useCallback(async () => {
       <div style={{display:"flex",alignItems:"center",gap:12,padding:"0 18px",height:50,borderBottom:"1px solid "+c.border,background:c.bg1,flexShrink:0}}>
         <div style={{width:8,height:8,borderRadius:"50%",background:c.cyan}}/>
         <span style={{fontWeight:700,fontSize:14,color:c.cyan}}>PATENT INTELLIGENCE</span>
-        <span style={{fontSize:12,color:c.muted}}>特許取得 / EPO OPS</span>
+        <span style={{fontSize:12,color:c.muted}}>特許取得 / Google Patents</span>
         <div style={{display:"flex",gap:4}}>
-          {TARGET_COUNTRIES.map(ct=>(
-            <span key={ct} style={{fontSize:11,fontWeight:700,color:COUNTRY_COLORS[ct],padding:"1px 7px",borderRadius:4,border:"1px solid "+COUNTRY_COLORS[ct],background:"#030b14"}}>{ct}</span>
-          ))}
+          <span style={{fontSize:11,fontWeight:700,color:c.green,padding:"1px 7px",borderRadius:4,border:"1px solid "+c.green,background:"#030b14"}}>全世界・ファミリー代表1件</span>
         </div>
         <button onClick={()=>setShowDashboard(true)}
           style={{marginLeft:8,padding:"5px 16px",borderRadius:6,border:"1px solid "+c.purple,background:"#0d0820",color:c.purple,fontSize:12,cursor:"pointer",fontWeight:700}}>
           📊 ダッシュボード
         </button>
         <div style={{marginLeft:"auto",fontSize:12}}>
-          {phase==="fetching"&&<span style={{color:c.amber}}>● EPO OPS 取得中...</span>}
+          {phase==="fetching"&&<span style={{color:c.amber}}>● Google Patents 取得中...</span>}
           {phase==="done"&&patents.length>0&&<span style={{color:c.green}}>✓ 取得完了</span>}
         </div>
       </div>
@@ -375,14 +360,16 @@ const loadFromDB = useCallback(async () => {
             {patents.length>0&&(
               <>
                 <div style={{...card,marginBottom:14,display:"flex",gap:16,alignItems:"center",flexWrap:"wrap"}}>
-                  <div><div style={{fontSize:11,color:c.muted,marginBottom:2}}>EPO総件数</div><div style={{fontSize:28,fontWeight:700,color:groupColor,fontFamily:"monospace"}}>{total.toLocaleString()}</div></div>
+                  <div><div style={{fontSize:11,color:c.muted,marginBottom:2}}>総件数（ファミリー数）</div><div style={{fontSize:28,fontWeight:700,color:groupColor,fontFamily:"monospace"}}>{total.toLocaleString()}</div></div>
                   <div style={{width:1,height:40,background:c.border}}/>
                   <div>
-                    <div style={{fontSize:11,color:c.muted,marginBottom:6}}>国別内訳</div>
-                    <div style={{display:"flex",gap:12}}>
-                      {TARGET_COUNTRIES.map(ct=>(<div key={ct}><span style={{fontSize:14,fontWeight:700,color:COUNTRY_COLORS[ct]}}>{ct}: </span><span style={{fontSize:14,fontWeight:700,color:c.text}}>{patents.filter(p=>p.country===ct).length}</span></div>))}
+                    <div style={{fontSize:11,color:c.muted,marginBottom:6}}>国別内訳（ファミリー代表の公開国）</div>
+                    <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+                      {[...new Set(patents.map(p=>p.country))].sort().map(ct=>(<div key={ct}><span style={{fontSize:14,fontWeight:700,color:COUNTRY_COLORS[ct]||"#94a3b8"}}>{ct}: </span><span style={{fontSize:14,fontWeight:700,color:c.text}}>{patents.filter(p=>p.country===ct).length}</span></div>))}
                     </div>
                   </div>
+                  <div style={{width:1,height:40,background:c.border}}/>
+                  <div><div style={{fontSize:11,color:c.muted,marginBottom:2}}>請求項・明細書あり</div><div style={{fontSize:28,fontWeight:700,color:c.cyan,fontFamily:"monospace"}}>{patents.filter(p=>p.claims_independent||p.description_text).length.toLocaleString()}</div></div>
                   <div style={{marginLeft:"auto"}}>
                     <button onClick={()=>setShowDashboard(true)} style={{padding:"10px 20px",borderRadius:8,border:"none",background:c.purple,color:"#fff",fontWeight:700,fontSize:13,cursor:"pointer"}}>
                       📊 ダッシュボードで分析する →
