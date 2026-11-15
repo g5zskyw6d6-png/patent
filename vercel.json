@@ -1,4 +1,9 @@
 {
   "buildCommand": "npm run build",
-  "installCommand": "npm install"
+  "installCommand": "npm install",
+  "functions": {
+    "api/gpatents-search.js": {
+      "maxDuration": 800
+    }
+  }
 }
