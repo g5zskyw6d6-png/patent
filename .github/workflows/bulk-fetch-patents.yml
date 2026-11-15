@@ -1,0 +1,31 @@
+name: Bulk fetch patents (Google Patents Datasets → Supabase)
+
+on:
+  workflow_dispatch:  # 手動実行ボタン(GitHubのActionsタブから実行可能)
+  schedule:
+    # 毎月1日 18:00 UTC (日本時間 毎月2日 03:00) に自動実行。
+    # 頻度を変えたい場合はこのcron式を調整してください。
+    - cron: '0 18 1 * *'
+
+jobs:
+  bulk-fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install --omit=dev --no-save @google-cloud/bigquery
+
+      - name: Run bulk patent fetch
+        run: node scripts/bulk-fetch-patents.mjs
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          GCP_SA_KEY_JSON: ${{ secrets.GCP_SA_KEY_JSON }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
