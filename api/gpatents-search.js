@@ -66,7 +66,7 @@ export default async function handler(req, res) {
       SELECT DISTINCT family_id
       FROM \`patents-public-data.patents.publications\`
       WHERE publication_date BETWEEN @dateFromNum AND @dateToNum
-        AND family_id IS NOT NULL AND family_id != 0
+        AND family_id IS NOT NULL AND family_id != '0'
         AND EXISTS (
           SELECT 1 FROM UNNEST(assignee_harmonized) AS a
           WHERE REGEXP_CONTAINS(REGEXP_REPLACE(LOWER(a.name), r'[^a-z0-9]', ''), @namePattern)
