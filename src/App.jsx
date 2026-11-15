@@ -61,12 +61,23 @@ async function sbUpsert(table, rows) {
   }
 
   // ② INSERT
-  const res = await fetchWithRetry(
-    SUPABASE_URL + "/rest/v1/" + table,
-    { method: "POST", headers: jsonH, body: JSON.stringify(rows) },
-    3
-  );
-  if (!res.ok) console.warn("Supabase upsert failed (" + table + "):", res.status);
+  let res;
+  try {
+    res = await fetchWithRetry(
+      SUPABASE_URL + "/rest/v1/" + table,
+      { method: "POST", headers: jsonH, body: JSON.stringify(rows) },
+      3
+    );
+  } catch (e) {
+    // fetchWithRetryは5xxをリトライした末にHTTPステータスだけのErrorを投げて終わる。
+    // その場合でも「保存失敗」と分かるように、ここで検知してエラーを投げ直す。
+    throw new Error("Supabase保存失敗 (" + table + "): " + e.message);
+  }
+  if (!res.ok) {
+    let detail = "";
+    try { detail = await res.text(); } catch {}
+    throw new Error("Supabase保存失敗 (" + table + ", HTTP " + res.status + "): " + detail.slice(0, 300));
+  }
 }
 async function savePatentsToDB(company, patents) {
   await sbUpsert("companies",[{id:company.id,name:company.name,legal:company.legal,sector:company.sector,flag:company.flag,group_id:company.group_id||null}]);
@@ -182,18 +193,30 @@ const loadFromDB = useCallback(async () => {
   const doFetch = useCallback(async()=>{
     if (!company) return;
     setPhase("fetching"); setErr(""); setDbStatus(""); setPatents([]);
+    let d;
     try {
-      const d = await fetchPatentsGoogle(company.legal, dateFrom, dateTo);
-      setPatents(d.patents); setTotal(d.total_patent_count);
-      saveToLS(company,d.patents,d.total_patent_count,dateFrom,dateTo);
-      setCachedIds(getCachedIds()); setPhase("done");
-      if (d.patents.length===0){setErr("取得0件でした。期間・企業名を確認してください。");return;}
-      if (dbReady()){
-        setDbStatus("DBに保存中...");
+      d = await fetchPatentsGoogle(company.legal, dateFrom, dateTo);
+    } catch(e){
+      setErr("Google Patents APIエラー: "+e.message);
+      setPhase("idle");
+      return;
+    }
+    // ★ ここまで来ればGoogle Patents取得自体は成功。以降のDB保存が失敗しても
+    //   取得結果の表示(phase="done")は維持し、保存エラーだけを別途知らせる。
+    setPatents(d.patents); setTotal(d.total_patent_count);
+    saveToLS(company,d.patents,d.total_patent_count,dateFrom,dateTo);
+    setCachedIds(getCachedIds()); setPhase("done");
+    if (d.patents.length===0){setErr("取得0件でした。期間・企業名を確認してください。");return;}
+    if (dbReady()){
+      setDbStatus("DBに保存中...");
+      try {
         await savePatentsToDB(company,d.patents);
         setDbStatus("DB保存完了（"+d.patents.length+"件）");
+      } catch(e){
+        setDbStatus("");
+        setErr("DB保存エラー: "+e.message+"（取得結果は画面上に表示されていますが、データベースへの保存に失敗しています）");
       }
-    } catch(e){setErr("Google Patents APIエラー: "+e.message);setPhase("idle");}
+    }
   },[company,dateFrom,dateTo]);
 
   const selectCompany = co => {
