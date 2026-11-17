@@ -106,37 +106,33 @@ function buildCompanyPatterns(companies) {
 
 function buildQuery() {
   return `
-    WITH all_in_range AS (
+    -- ★ まず「全社ぶんの出願人名を1つにまとめた正規表現」でEXISTS判定し、
+    --   対象ファミリーを早い段階で小さく絞り込む(以前の1社版production
+    --   コードと同じ、実績のある軽いWHERE EXISTSパターン)。
+    --   これをせずにいきなり「117社それぞれとの突き合わせ」を全世界・
+    --   全期間ぶんの行に対して行うと、計算量が爆発して実行が数時間
+    --   かかってしまう(実際に発生した問題)。
+    WITH target_families AS (
+      SELECT DISTINCT family_id
+      FROM \`patents-public-data.patents.publications\`
+      WHERE publication_date BETWEEN @dateFromNum AND @dateToNum
+        AND family_id IS NOT NULL AND family_id != '0'
+        AND EXISTS (
+          SELECT 1 FROM UNNEST(assignee_harmonized) AS a
+          WHERE REGEXP_CONTAINS(REGEXP_REPLACE(LOWER(a.name), r'[^a-z0-9]', ''), @combinedPattern)
+        )
+    ),
+    -- ここから先は対象ファミリーに絞り込んだ後なので、117社との詳細な
+    -- 突き合わせ(どの企業にマッチしたか)をしても件数が少なく軽い。
+    family_doc_matches AS (
       SELECT
         p.family_id,
-        -- ★ EXISTS(...)を使った入れ子の相関サブクエリは、BigQueryのオプティマイザが
-        --   LEFT SEMI JOINとして実行しようとして
-        --   "LEFT SEMI JOIN cannot be used without a condition that is an equality
-        --   of fields from both sides of the join." というエラーになることがある
-        --   (正規表現マッチは等価条件ではないため)。
-        --   EXISTSを使わず、2つの配列(出願人名 × 企業パターン)の直積を
-        --   ARRAY_AGG(DISTINCT ...)で集約する形に書き換えることで回避する。
-        --   スキャン対象カラムは変わらないため、課金額への影響はない。
+        p.publication_number,
         IFNULL((
           SELECT ARRAY_AGG(DISTINCT c.id)
           FROM UNNEST(p.assignee_harmonized) AS a, UNNEST(@companies) AS c
           WHERE REGEXP_CONTAINS(REGEXP_REPLACE(LOWER(a.name), r'[^a-z0-9]', ''), c.pattern)
-        ), []) AS matched_ids
-      FROM \`patents-public-data.patents.publications\` p
-      WHERE p.publication_date BETWEEN @dateFromNum AND @dateToNum
-        AND p.family_id IS NOT NULL AND p.family_id != '0'
-    ),
-    family_company_map AS (
-      SELECT family_id, ARRAY_CONCAT_AGG(matched_ids) AS matched_company_ids
-      FROM all_in_range
-      WHERE ARRAY_LENGTH(matched_ids) > 0
-      GROUP BY family_id
-    ),
-    family_docs AS (
-      SELECT
-        p.family_id,
-        f.matched_company_ids,
-        p.publication_number,
+        ), []) AS matched_ids,
         p.country_code,
         p.publication_date,
         p.filing_date,
@@ -150,12 +146,9 @@ function buildQuery() {
           (SELECT text FROM UNNEST(p.abstract_localized) WHERE language = 'en' LIMIT 1),
           (SELECT text FROM UNNEST(p.abstract_localized) LIMIT 1)
         ) AS abstract_en,
-        -- ★ claims_text/description_textはSQL側でSUBSTRして長さを制限する。
-        --   後段のJS側でもdescription_textは30000文字に切り詰めていたが、
-        --   制限前の全文をBigQueryから転送するとNode側のJSONパース時に
-        --   メモリを大量消費し(117社分×全世界2〜3年分の結果セットで
-        --   OOM/JavaScript heap out of memoryが発生した実績あり)、
-        --   スキャン課金額には影響しないため早めに切り詰めておく。
+        -- claims_text/description_textはSQL側でもSUBSTRして長さを制限する
+        -- (後段のJS側の切り詰めと合わせて転送量・メモリ使用量を削減。
+        --  スキャン課金額には影響しない)。
         SUBSTR(COALESCE(
           (SELECT text FROM UNNEST(p.claims_localized) WHERE language = 'en' LIMIT 1),
           (SELECT text FROM UNNEST(p.claims_localized) LIMIT 1)
@@ -167,18 +160,29 @@ function buildQuery() {
         ARRAY(SELECT name FROM UNNEST(p.inventor_harmonized)) AS inventors,
         ARRAY(SELECT code FROM UNNEST(p.cpc)) AS cpc_codes
       FROM \`patents-public-data.patents.publications\` p
-      JOIN family_company_map f ON p.family_id = f.family_id
+      JOIN target_families f ON p.family_id = f.family_id
+    ),
+    -- 同じファミリー内の別の公開公報(例:国内移行後の翻訳版)でしか
+    -- マッチしない出願人名表記があっても取りこぼさないよう、ファミリー内の
+    -- 全ドキュメントのmatched_idsを合算してから代表ドキュメントを選ぶ。
+    family_company_map AS (
+      SELECT family_id, ARRAY_CONCAT_AGG(matched_ids) AS matched_company_ids
+      FROM family_doc_matches
+      GROUP BY family_id
     ),
     ranked AS (
-      SELECT *,
+      SELECT
+        d.* EXCEPT(matched_ids),
+        m.matched_company_ids,
         ROW_NUMBER() OVER (
-          PARTITION BY family_id
+          PARTITION BY d.family_id
           ORDER BY
-            (CASE WHEN claims_n > 0 AND desc_n > 0 THEN 0 ELSE 1 END),
-            (claims_n + desc_n) DESC,
-            publication_date DESC
+            (CASE WHEN d.claims_n > 0 AND d.desc_n > 0 THEN 0 ELSE 1 END),
+            (d.claims_n + d.desc_n) DESC,
+            d.publication_date DESC
         ) AS rn
-      FROM family_docs
+      FROM family_doc_matches d
+      JOIN family_company_map m ON d.family_id = m.family_id
     )
     SELECT * EXCEPT(rn, claims_n, desc_n) FROM ranked WHERE rn = 1
   `;
