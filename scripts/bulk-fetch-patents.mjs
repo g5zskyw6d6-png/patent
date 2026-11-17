@@ -287,8 +287,14 @@ async function main() {
   const bigquery = new BigQuery({ projectId: process.env.GCP_PROJECT_ID, credentials });
 
   const query = buildQuery();
+  // ★ target_familiesの早期絞り込み用に、全社ぶんのパターンを1つの
+  //   正規表現(OR)にまとめる。これは「どの企業にマッチしたか」は
+  //   問わず、「いずれかにマッチするか」だけを高速に判定するための
+  //   もので、以前の1社検索production版と同じ使い方。
+  const combinedPattern = entries.map(e => e.pattern).join('|');
   const params = {
     companies: entries,
+    combinedPattern,
     dateFromNum: toYYYYMMDD(DATE_FROM),
     dateToNum: toYYYYMMDD(DATE_TO),
   };
