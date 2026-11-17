@@ -1,0 +1,58 @@
+name: Tape/Adhesive patents (global keyword search)
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'count = 件数確認のみ / extract = 実データ取得'
+        required: true
+        default: 'count'
+        type: choice
+        options:
+          - count
+          - extract
+      extract_filter:
+        description: '(extractモードのみ) 使用する絞り込み条件名'
+        required: false
+        default: 'cpc_and_keyword'
+      date_from:
+        description: '対象期間 開始(YYYY-MM-DD)'
+        required: false
+        default: '2024-01-01'
+      max_rows:
+        description: '(extractモードのみ) 最大取得件数'
+        required: false
+        default: '3000'
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install --omit=dev --no-save @google-cloud/bigquery
+
+      - name: Run tape/adhesive patent search
+        run: node --max-old-space-size=6144 scripts/tape-adhesive-patents.mjs
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          GCP_SA_KEY_JSON: ${{ secrets.GCP_SA_KEY_JSON }}
+          MODE: ${{ inputs.mode }}
+          EXTRACT_FILTER: ${{ inputs.extract_filter }}
+          DATE_FROM: ${{ inputs.date_from }}
+          MAX_ROWS: ${{ inputs.max_rows }}
+
+      - name: Upload extracted data (extract mode only)
+        if: inputs.mode == 'extract'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tape-adhesive-patents
+          path: tape-adhesive-patents.jsonl
+          retention-days: 30
